@@ -1,0 +1,27 @@
+
+
+Como usar no seu Droplet:
+
+1. Envie o projeto para o servidor (via git ou SCP).
+
+2. Dê permissão de execução ao script:
+
+chmod +x deploy-setup.sh
+
+3. Execute o script:
+
+./deploy-setup.sh   
+
+4. Variáveis de Ambiente: 
+  - Verifique se o arquivo ./backend/.env existe e 
+    está configurado corretamente no servidor.
+
+5.Configuração de DNS:
+  - Certifique-se de que o domínio estagio.getmais.com.br 
+  (definido no seu nginx.conf) 
+  está apontando para o IP do seu Droplet.
+
+Após a execução, o seu servidor estará 100% pronto para rodar o comando:
+
+docker-compose up -d --build
+
