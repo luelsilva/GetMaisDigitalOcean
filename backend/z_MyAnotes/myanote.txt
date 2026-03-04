@@ -1,0 +1,52 @@
+
+
+Nesta API estou usando a Vercel e o Supabase,
+O acesso ao banco é direto, sem passar pela API do supabase.
+
+Uma vez que a Vercel e o Supabase entram em dormência,
+fiz um endpoint https://urso.getmais.com.br/api/system/ping
+para manter a API ativa.
+
+O endpoint é chamado a cada 10 minutos pelo serviço de Cron Job
+deste site:
+url: https://cron-job.org/en/
+user: luizkrx@gmail.com
+password: 6714real
+
+1. Job para Manter Ativo (Keep Alive)
+Este é o mais importante para evitar a lentidão que você notou:
+
+Título: CEDUP - Keep Alive
+URL: https://urso.getmais.com.br/api/system/ping
+Método: GET
+Frequência: A cada 15 minutos (isso garantirá que nem a Vercel nem o Supabase entrem em dormência).
+
+2. Job para Limpar a Tabela (Limpeza)
+Para evitar que a tabela keep_alive cresça infinitamente com o tempo:
+
+Título: CEDUP - Limpeza Keep Alive
+URL: https://urso.getmais.com.br/api/system/clear
+Método: DELETE (O cron-job.org permite escolher o método na aba "Advanced" ou "Methods").
+Frequência: Uma vez por semana ou por mês (ex: todo domingo às 03:00).
+
+Dica de Segurança (Opcional mas Recomendada)
+Atualmente, qualquer pessoa que descobrir a URL .../clear pode limpar sua tabela. Se você quiser proteger isso, podemos adicionar uma "chave" simples:
+
+No cron-job.org, você pode adicionar um Header personalizado:
+
+Header: x-api-key
+Valor: sua-senha-secreta
+
+Pronto! Implementei a proteção por API Key no endpoint de limpeza.
+
+O que mudou:
+Configuração: Adicionei a variável systemApiKey ao arquivo de configuração do backend. Ela busca o valor da variável de ambiente SYSTEM_API_KEY. Se não estiver definida, ela usa por padrão keep-alive-secret-123.
+Proteção: O endpoint de limpeza (DELETE /api/system/clear) agora verifica se o Header x-api-key enviado na requisição coincide com a chave configurada no servidor. Se não enviar ou a chave estiver errada, ele retorna 401 Unauthorized.
+Como configurar no cron-job.org:
+Para o job de Limpeza (o que roda uma vez por semana/mês):
+
+Vá na aba Headers (ou Advanced).
+Adicione um novo Header:
+Key: x-api-key
+Value: keep-alive-secret-123 (ou o valor que você definir na sua variável de ambiente SYSTEM_API_KEY na Vercel).
+O job de Ping (o que roda a cada 15 min) continua público e não precisa de Header, pois ele só insere um registro e não oferece risco.
