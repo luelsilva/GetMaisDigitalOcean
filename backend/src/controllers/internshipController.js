@@ -143,8 +143,6 @@ exports.createInternship = async (req, res, next) => {
         // Validações básicas
         if (!studentName) return res.status(400).json({ error: 'Nome do aluno é obrigatório' });
         if (!courseSigla) return res.status(400).json({ error: 'Sigla do curso é obrigatória' });
-        if (!companyName) return res.status(400).json({ error: 'Nome da empresa é obrigatório' });
-        if (!companyCnpj) return res.status(400).json({ error: 'CNPJ da empresa é obrigatório' });
 
         const [newInternship] = await db.insert(internships).values({
             userId: req.user.id, // Salva o ID do usuário que criou (responsável)

@@ -233,14 +233,6 @@
 			alert('Por favor, selecione o curso');
 			return;
 		}
-		if (!formValues['nome_empresa']) {
-			alert('Por favor, preencha o nome da empresa');
-			return;
-		}
-		if (!formValues['cnpj_empresa']) {
-			alert('Por favor, preencha o CNPJ da empresa');
-			return;
-		}
 
 		saving = true;
 		saveSuccess = false;
