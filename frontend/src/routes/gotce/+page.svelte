@@ -302,39 +302,6 @@
 				}
 			});
 
-			if (form?.secoes) {
-				form.secoes.forEach((secao) => {
-					secao.rows.forEach((row) => {
-						row.cols.forEach((col) => {
-							const inputId = col.id;
-							if (!inputId) return;
-							const xxMatch = inputId.match(/^xx\d(.+)$/);
-							if (xxMatch) {
-								const sourceId = xxMatch[1];
-								if (formValues[sourceId] !== undefined) {
-									dataToSubmit[inputId] = formValues[sourceId];
-								}
-							}
-							let val = dataToSubmit[inputId];
-							if (val === undefined || val === null || val === '') {
-								dataToSubmit[inputId] = ' '.repeat(inputId.length);
-								return;
-							}
-							// Formatação de Data para o padrão PT-BR (DD/MM/YYYY)
-							// Aplicamos se for tipo 'date' OU se for um campo duplicado 'xx' que contém uma data
-							if (
-								(col.type === 'date' || xxMatch) &&
-								typeof val === 'string' &&
-								/^\d{4}-\d{2}-\d{2}$/.test(val)
-							) {
-								const parts = val.split('-');
-								dataToSubmit[inputId] = `${parts[2]}/${parts[1]}/${parts[0]}`;
-							}
-						});
-					});
-				});
-			}
-
 			suffixes.forEach((suffix) => {
 				const suffixLower = suffix.toLowerCase();
 				const suffixCap = suffix.charAt(0).toUpperCase() + suffix.slice(1);
@@ -358,6 +325,41 @@
 					dataToSubmit[`ender_completo_${suffixLower}`] = value;
 				}
 			});
+
+			if (form?.secoes) {
+				form.secoes.forEach((secao) => {
+					secao.rows.forEach((row) => {
+						row.cols.forEach((col) => {
+							const inputId = col.id;
+							if (!inputId) return;
+							const xxMatch = inputId.match(/^xx\d(.+)$/);
+							if (xxMatch) {
+								const sourceId = xxMatch[1];
+								// Agora buscamos de dataToSubmit, que já contém os endereços gerados
+								if (dataToSubmit[sourceId] !== undefined) {
+									dataToSubmit[inputId] = dataToSubmit[sourceId];
+								} else if (formValues[sourceId] !== undefined) {
+									dataToSubmit[inputId] = formValues[sourceId];
+								}
+							}
+							let val = dataToSubmit[inputId];
+							if (val === undefined || val === null || val === '') {
+								dataToSubmit[inputId] = ' '.repeat(inputId.length);
+								return;
+							}
+							// Formatação de Data para o padrão PT-BR (DD/MM/YYYY)
+							if (
+								(col.type === 'date' || xxMatch) &&
+								typeof val === 'string' &&
+								/^\d{4}-\d{2}-\d{2}$/.test(val)
+							) {
+								const parts = val.split('-');
+								dataToSubmit[inputId] = `${parts[2]}/${parts[1]}/${parts[0]}`;
+							}
+						});
+					});
+				});
+			}
 
 			const nomeAluno = formValues['nome_aluno'] || formValues['NomeAluno'] || 'Novo_Documento';
 			const nomeDocumento = `1501 - ${nomeAluno}`;

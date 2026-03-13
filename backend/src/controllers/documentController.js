@@ -20,7 +20,7 @@ const generateDocx = async (req, res) => {
     try {
         // O template_id mapeia para o nome do arquivo na pasta src/templates (ex: 1508.docx)
         const templatePath = path.resolve(__dirname, '../templates', `${template_id}.docx`);
-
+        console.log(templatePath);
         if (!fs.existsSync(templatePath)) {
             return res.status(404).json({
                 error: `O modelo '${template_id}.docx' não foi encontrado na pasta de templates do servidor.`
