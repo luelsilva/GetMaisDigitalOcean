@@ -224,7 +224,141 @@
 		}
 	}
 
+	async function checkInternshipPeriod() {
+		const start = formValues['dt_inicio'] || formValues['data_inicio'] || formValues['DataInicio'];
+		const end = formValues['dt_fim'] || formValues['data_final'] || formValues['DataFinal'];
+		const totalHours = Number(formValues['carga_total'] || formValues['CargaTotal']);
+		const dailyHours = Number(formValues['carga_diaria'] || formValues['CargaDiaria']);
+
+		if (!start || !end || !totalHours || !dailyHours) {
+			return;
+		}
+
+		try {
+			const dateStart = new Date(start + 'T00:00:00');
+			const dateEnd = new Date(end + 'T00:00:00');
+
+			if (dateEnd < dateStart) {
+				formValues['information'] = '❌ Erro: A data final é anterior à data de início.';
+				return;
+			}
+
+			const years = [...new Set([dateStart.getFullYear(), dateEnd.getFullYear()])];
+			let holidays: any[] = [];
+			for (const year of years) {
+				try {
+					const res = await fetch(`https://brasilapi.com.br/api/feriados/v1/${year}`);
+					if (res.ok) {
+						const data = await res.json();
+						holidays = [...holidays, ...data];
+					}
+				} catch (e) {
+					console.error(`Erro ao buscar feriados de ${year}:`, e);
+				}
+			}
+
+			let workingDays = 0;
+			let current = new Date(dateStart);
+			while (current <= dateEnd) {
+				const dayOfWeek = current.getDay(); // 0 = Domingo, 6 = Sábado
+				const dateStr = current.toISOString().split('T')[0];
+				const isHoliday = holidays.some((h: any) => h.date === dateStr);
+
+				if (dayOfWeek !== 0 && dayOfWeek !== 6 && !isHoliday) {
+					workingDays++;
+				}
+				current.setDate(current.getDate() + 1);
+			}
+
+			const neededDays = Math.ceil(totalHours / dailyHours);
+			if (workingDays >= neededDays) {
+				formValues['information'] = `✅ O período possui ${workingDays} dias úteis. Suficiente para completar as ${totalHours}h (necessário ${neededDays} dias).`;
+			} else {
+				const missingDays = neededDays - workingDays;
+				formValues['information'] = `❌ Alerta: O período possui apenas ${workingDays} dias úteis, mas são necessários ${neededDays} dias para completar ${totalHours}h. Faltam ${missingDays} dias.`;
+			}
+		} catch (error) {
+			console.error('Erro na validação do período:', error);
+			formValues['information'] = '⚠️ Erro ao calcular período de estágio.';
+		}
+	}
+
+	async function suggestEndDate() {
+		const start = formValues['dt_inicio'] || formValues['data_inicio'] || formValues['DataInicio'];
+		const totalHours = Number(formValues['carga_total'] || formValues['CargaTotal']);
+		const dailyHours = Number(formValues['carga_diaria'] || formValues['CargaDiaria']);
+
+		if (!start || !totalHours || !dailyHours) {
+			alert('Preencha a Carga Total, Carga Diária e Data de Início para sugerir uma data final.');
+			return;
+		}
+
+		const neededDays = Math.ceil(totalHours / dailyHours);
+		let workingDaysFound = 0;
+		let currentDate = new Date(start + 'T00:00:00');
+
+		try {
+			// Buscar feriados para o ano atual e o próximo
+			const currentYear = currentDate.getFullYear();
+			const years = [currentYear, currentYear + 1];
+			let holidays: any[] = [];
+			for (const year of years) {
+				const res = await fetch(`https://brasilapi.com.br/api/feriados/v1/${year}`);
+				if (res.ok) {
+					const data = await res.json();
+					holidays = [...holidays, ...data];
+				}
+			}
+
+			// Loop para encontrar a data final (Incluindo o dia de início no cálculo)
+			while (true) {
+				const dayOfWeek = currentDate.getDay();
+				const dateStr = currentDate.toISOString().split('T')[0];
+				const isHoliday = holidays.some((h: any) => h.date === dateStr);
+
+				if (dayOfWeek !== 0 && dayOfWeek !== 6 && !isHoliday) {
+					workingDaysFound++;
+				}
+
+				if (workingDaysFound >= neededDays) break;
+
+				currentDate.setDate(currentDate.getDate() + 1);
+			}
+
+			const suggestedDate = currentDate.toISOString().split('T')[0];
+			
+			// Atualiza todas as possíveis variações de ID para o campo de data final
+			const endId = ['dt_fim', 'data_final', 'DataFinal'].find(id => formValues[id] !== undefined) || 'data_final';
+			formValues[endId] = suggestedDate;
+			
+			// Força atualização em outros campos que possam existir no JSON do formulário
+			Object.keys(formValues).forEach(key => {
+				if (key.toLowerCase().includes('datafinal') || key.toLowerCase() === 'dt_fim' || key.toLowerCase() === 'data_final') {
+					formValues[key] = suggestedDate;
+				}
+			});
+
+			alert(`Data sugerida: ${currentDate.toLocaleDateString('pt-BR')} (${neededDays} dias úteis)`);
+		} catch (error) {
+			console.error('Erro ao sugerir data:', error);
+			alert('Erro ao calcular data sugerida.');
+		}
+	}
+
+	function syncTurno() {
+		const selectTurno = formValues['select_turno'];
+		if (selectTurno === 'Matutino') {
+			formValues['turno'] = '( X ) M    (    ) V     (    ) N';
+		} else if (selectTurno === 'Vespertino') {
+			formValues['turno'] = '(    ) M    ( X ) V     (    ) N';
+		} else if (selectTurno === 'Noturno') {
+			formValues['turno'] = '(    ) M    (    ) V     ( X ) N';
+		}
+	}
+
 	async function handleSave() {
+		syncTurno();
+		await checkInternshipPeriod();
 		if (!formValues['nome_aluno']) {
 			alert('Por favor, preencha o nome do aluno');
 			return;
@@ -290,6 +424,8 @@
 	}
 
 	async function handleSubmit() {
+		syncTurno();
+		await checkInternshipPeriod();
 		submitting = true;
 		try {
 			const dataToSubmit = { ...formValues };
@@ -484,16 +620,28 @@
 																onblur={(e) => handleCepLookup(inputId, e.currentTarget.value)}
 															/>
 														{:else}
-															<input
-																id={inputId}
-																type={inputType}
-																class="col-input"
-																bind:value={formValues[inputId]}
-																required={col.required !== false}
-																onkeydown={inputType === 'number'
-																	? handleNumericKeydown
-																	: undefined}
-															/>
+															<div class="relative flex items-center">
+																<input
+																	id={inputId}
+																	type={inputType}
+																	class="col-input"
+																	bind:value={formValues[inputId]}
+																	required={col.required !== false}
+																	onkeydown={inputType === 'number'
+																		? handleNumericKeydown
+																		: undefined}
+																/>
+																{#if inputType === 'date' && (inputId.toLowerCase().includes('fim') || inputId.toLowerCase().includes('final'))}
+																	<button
+																		type="button"
+																		onclick={suggestEndDate}
+																		class="ml-1 text-xl hover:scale-110 active:scale-95 transition-transform"
+																		title="Sugerir data final baseada em dias úteis"
+																	>
+																		💡
+																	</button>
+																{/if}
+															</div>
 														{/if}
 													</div>
 												{/if}
