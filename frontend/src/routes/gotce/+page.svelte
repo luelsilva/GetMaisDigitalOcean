@@ -24,6 +24,17 @@
 	let saveSuccess = $state(false);
 	let formModified = $state(false);
 
+	let toastMessage = $state('');
+	let toastType = $state<'success' | 'error'>('success');
+
+	function showToast(message: string, type: 'success' | 'error' = 'success') {
+		toastMessage = message;
+		toastType = type;
+		setTimeout(() => {
+			toastMessage = '';
+		}, 3000);
+	}
+
 	function markAsModified() {
 		formModified = true;
 	}
@@ -392,11 +403,11 @@
 		syncTurno();
 		await checkInternshipPeriod();
 		if (!formValues['nome_aluno']) {
-			alert('Por favor, preencha o nome do aluno');
+			showToast('Por favor, preencha o nome do aluno', 'error');
 			return;
 		}
 		if (!formValues['nome_curso']) {
-			alert('Por favor, selecione o curso');
+			showToast('Por favor, selecione o curso', 'error');
 			return;
 		}
 
@@ -436,21 +447,22 @@
 				saveSuccess = true;
 				formModified = false; // Reseta depois de salvar
 				const savedData = await response.json();
-				alert(
+				showToast(
 					pageData.mode === 'edit'
 						? 'Estágio atualizado com sucesso!'
-						: 'Estágio salvo com sucesso!'
+						: 'Estágio salvo com sucesso!',
+					'success'
 				);
 				if (pageData.mode === 'new') {
 					window.location.href = `/gotce?id=${savedData.id}`;
 				}
 			} else {
 				const err = await response.json();
-				alert('Erro ao salvar: ' + (err.error || 'Erro desconhecido'));
+				showToast('Erro ao salvar: ' + (err.error || 'Erro desconhecido'), 'error');
 			}
 		} catch (error) {
 			console.error(error);
-			alert('Erro de conexão ao salvar o estágio');
+			showToast('Erro de conexão ao salvar o estágio', 'error');
 		} finally {
 			saving = false;
 		}
@@ -561,11 +573,11 @@
 				successLink = URL.createObjectURL(blob);
 			} else {
 				const err = await res.json();
-				alert('Erro ao gerar documento: ' + (err.error || 'Erro desconhecido'));
+				showToast('Erro ao gerar documento: ' + (err.error || 'Erro desconhecido'), 'error');
 			}
 		} catch (error) {
 			console.error(error);
-			alert('Erro de conexão ao gerar o documento');
+			showToast('Erro de conexão ao gerar o documento', 'error');
 		} finally {
 			submitting = false;
 		}
@@ -753,6 +765,16 @@
 			</form>
 		</div>
 	</div>
+
+	{#if toastMessage}
+		<div
+			class="fixed right-4 bottom-4 z-50 rounded-lg px-6 py-3 text-white shadow-lg transition-all"
+			style="background-color: {toastType === 'success' ? '#10B981' : '#EF4444'};"
+			in:fade
+		>
+			<p class="font-bold">{toastMessage}</p>
+		</div>
+	{/if}
 {:else}
 	<div class="flex min-h-[70vh] items-center justify-center">
 		<p class="animate-pulse text-gray-500">Carregando formulário...</p>
