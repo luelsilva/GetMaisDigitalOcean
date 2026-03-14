@@ -224,11 +224,20 @@
 		}
 	}
 
+	function parseTimeValue(val: any): number {
+		if (!val) return 0;
+		if (typeof val === 'string' && val.includes(':')) {
+			const [h, m] = val.split(':');
+			return Number(h) + Number(m) / 60;
+		}
+		return Number(val) || 0;
+	}
+
 	async function checkInternshipPeriod() {
 		const start = formValues['dt_inicio'] || formValues['data_inicio'] || formValues['DataInicio'];
 		const end = formValues['dt_fim'] || formValues['data_final'] || formValues['DataFinal'];
-		const totalHours = Number(formValues['carga_total'] || formValues['CargaTotal']);
-		const dailyHours = Number(formValues['carga_diaria'] || formValues['CargaDiaria']);
+		const totalHours = parseTimeValue(formValues['carga_total'] || formValues['CargaTotal']);
+		const dailyHours = parseTimeValue(formValues['carga_diaria'] || formValues['CargaDiaria']);
 
 		if (dailyHours) {
 			formValues['carga_semanal'] = dailyHours * 5;
@@ -276,10 +285,12 @@
 
 			const neededDays = Math.ceil(totalHours / dailyHours);
 			if (workingDays >= neededDays) {
-				formValues['information'] = `✅ O período possui ${workingDays} dias úteis. Suficiente para completar as ${totalHours}h (necessário ${neededDays} dias).`;
+				formValues['information'] =
+					`✅ O período possui ${workingDays} dias úteis. Suficiente para completar as ${totalHours}h (necessário ${neededDays} dias).`;
 			} else {
 				const missingDays = neededDays - workingDays;
-				formValues['information'] = `❌ Alerta: O período possui apenas ${workingDays} dias úteis, mas são necessários ${neededDays} dias para completar ${totalHours}h. Faltam ${missingDays} dias.`;
+				formValues['information'] =
+					`❌ Alerta: O período possui apenas ${workingDays} dias úteis, mas são necessários ${neededDays} dias para completar ${totalHours}h. Faltam ${missingDays} dias.`;
 			}
 		} catch (error) {
 			console.error('Erro na validação do período:', error);
@@ -289,8 +300,8 @@
 
 	async function suggestEndDate() {
 		const start = formValues['dt_inicio'] || formValues['data_inicio'] || formValues['DataInicio'];
-		const totalHours = Number(formValues['carga_total'] || formValues['CargaTotal']);
-		const dailyHours = Number(formValues['carga_diaria'] || formValues['CargaDiaria']);
+		const totalHours = parseTimeValue(formValues['carga_total'] || formValues['CargaTotal']);
+		const dailyHours = parseTimeValue(formValues['carga_diaria'] || formValues['CargaDiaria']);
 
 		if (!start || !totalHours || !dailyHours) {
 			alert('Preencha a Carga Total, Carga Diária e Data de Início para sugerir uma data final.');
@@ -330,14 +341,20 @@
 			}
 
 			const suggestedDate = currentDate.toISOString().split('T')[0];
-			
+
 			// Atualiza todas as possíveis variações de ID para o campo de data final
-			const endId = ['dt_fim', 'data_final', 'DataFinal'].find(id => formValues[id] !== undefined) || 'data_final';
+			const endId =
+				['dt_fim', 'data_final', 'DataFinal'].find((id) => formValues[id] !== undefined) ||
+				'data_final';
 			formValues[endId] = suggestedDate;
-			
+
 			// Força atualização em outros campos que possam existir no JSON do formulário
-			Object.keys(formValues).forEach(key => {
-				if (key.toLowerCase().includes('datafinal') || key.toLowerCase() === 'dt_fim' || key.toLowerCase() === 'data_final') {
+			Object.keys(formValues).forEach((key) => {
+				if (
+					key.toLowerCase().includes('datafinal') ||
+					key.toLowerCase() === 'dt_fim' ||
+					key.toLowerCase() === 'data_final'
+				) {
 					formValues[key] = suggestedDate;
 				}
 			});
@@ -635,7 +652,9 @@
 																		? handleNumericKeydown
 																		: undefined}
 																/>
-																{#if inputType === 'date' && (inputId.toLowerCase().includes('fim') || inputId.toLowerCase().includes('final'))}
+																{#if inputType === 'date' && (inputId
+																		.toLowerCase()
+																		.includes('fim') || inputId.toLowerCase().includes('final'))}
 																	<button
 																		type="button"
 																		onclick={suggestEndDate}
