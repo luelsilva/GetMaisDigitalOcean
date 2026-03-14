@@ -230,6 +230,10 @@
 		const totalHours = Number(formValues['carga_total'] || formValues['CargaTotal']);
 		const dailyHours = Number(formValues['carga_diaria'] || formValues['CargaDiaria']);
 
+		if (dailyHours) {
+			formValues['carga_semanal'] = dailyHours * 5;
+		}
+
 		if (!start || !end || !totalHours || !dailyHours) {
 			return;
 		}
