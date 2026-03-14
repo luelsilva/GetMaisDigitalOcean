@@ -233,6 +233,12 @@
 		return Number(val) || 0;
 	}
 
+	function formatTimeValue(hours: number): string {
+		const h = Math.floor(hours);
+		const m = Math.round((hours - h) * 60);
+		return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+	}
+
 	async function checkInternshipPeriod() {
 		const start = formValues['dt_inicio'] || formValues['data_inicio'] || formValues['DataInicio'];
 		const end = formValues['dt_fim'] || formValues['data_final'] || formValues['DataFinal'];
@@ -240,7 +246,7 @@
 		const dailyHours = parseTimeValue(formValues['carga_diaria'] || formValues['CargaDiaria']);
 
 		if (dailyHours) {
-			formValues['carga_semanal'] = dailyHours * 5;
+			formValues['carga_semanal'] = formatTimeValue(dailyHours * 5);
 		}
 
 		if (!start || !end || !totalHours || !dailyHours) {
@@ -658,7 +664,7 @@
 																	<button
 																		type="button"
 																		onclick={suggestEndDate}
-																		class="ml-1 text-xl hover:scale-110 active:scale-95 transition-transform"
+																		class="ml-1 text-xl transition-transform hover:scale-110 active:scale-95"
 																		title="Sugerir data final baseada em dias úteis"
 																	>
 																		💡
