@@ -22,6 +22,11 @@
 
 	let saving = $state(false);
 	let saveSuccess = $state(false);
+	let formModified = $state(false);
+
+	function markAsModified() {
+		formModified = true;
+	}
 
 	onMount(() => {
 		// Documentação para Desenvolvedores (Acessível via F2)
@@ -429,6 +434,7 @@
 
 			if (response.ok) {
 				saveSuccess = true;
+				formModified = false; // Reseta depois de salvar
 				const savedData = await response.json();
 				alert(
 					pageData.mode === 'edit'
@@ -451,6 +457,15 @@
 	}
 
 	async function handleSubmit() {
+		// Se o formulário tiver modificações pendentes, salve primeiro antes de gerar
+		if (formModified) {
+			await handleSave();
+			// Se encontrou erro ao salvar ou falhou, não prossiga com a geração do documento
+			if (!saveSuccess) {
+				return;
+			}
+		}
+
 		syncTurno();
 		await checkInternshipPeriod();
 		submitting = true;
@@ -613,6 +628,7 @@
 																class="col-input min-h-[100px]"
 																bind:value={formValues[inputId]}
 																required={col.required !== false}
+																onchange={markAsModified}
 															></textarea>
 														{:else if inputType === 'select'}
 															<select
@@ -620,6 +636,7 @@
 																class="col-input"
 																bind:value={formValues[inputId]}
 																required={col.required !== false}
+																onchange={markAsModified}
 															>
 																<option value="" disabled selected>Selecione...</option>
 																{#each getOptions(inputId) as opt}
@@ -644,6 +661,7 @@
 																required={col.required !== false}
 																maxlength="9"
 																placeholder="00000-000"
+																onchange={markAsModified}
 																onblur={(e) => handleCepLookup(inputId, e.currentTarget.value)}
 															/>
 														{:else}
@@ -654,6 +672,7 @@
 																	class="col-input"
 																	bind:value={formValues[inputId]}
 																	required={col.required !== false}
+																	onchange={markAsModified}
 																	onkeydown={inputType === 'number'
 																		? handleNumericKeydown
 																		: undefined}
@@ -688,9 +707,11 @@
 						<button
 							type="button"
 							onclick={handleSave}
-							disabled={saving}
+							disabled={!formModified || saving}
 							class="btn-submit flex-1"
-							style="background-color: {form.tituloColor}"
+							style="background-color: {form.tituloColor}; opacity: {!formModified || saving
+								? 0.5
+								: 1}; cursor: {!formModified || saving ? 'not-allowed' : 'pointer'};"
 						>
 							{#if saving}
 								<span class="mr-2 animate-spin">🌀</span> Salvando...
