@@ -326,7 +326,7 @@
 		}
 	}
 
-	async function suggestEndDate() {
+	async function suggestEndDate(targetId?: string) {
 		const start = formValues['dt_inicio'] || formValues['data_inicio'] || formValues['DataInicio'];
 		const totalHours = parseTimeValue(formValues['carga_total'] || formValues['CargaTotal']);
 		const dailyHours = parseTimeValue(formValues['carga_diaria'] || formValues['CargaDiaria']);
@@ -372,6 +372,7 @@
 
 			// Atualiza todas as possíveis variações de ID para o campo de data final
 			const endId =
+				targetId ||
 				['dt_fim', 'data_final', 'DataFinal'].find((id) => formValues[id] !== undefined) ||
 				'data_final';
 			formValues[endId] = suggestedDate;
@@ -386,6 +387,9 @@
 					formValues[key] = suggestedDate;
 				}
 			});
+			
+			// Se o targetId foi passado, garante que ele está marcado como modificado
+			markAsModified();
 
 			alert(`Data sugerida: ${currentDate.toLocaleDateString('pt-BR')} (${neededDays} dias úteis)`);
 		} catch (error) {
@@ -702,7 +706,7 @@
 																		.includes('fim') || inputId.toLowerCase().includes('final'))}
 																	<button
 																		type="button"
-																		onclick={suggestEndDate}
+																		onclick={() => suggestEndDate(inputId)}
 																		class="ml-1 text-xl transition-transform hover:scale-110 active:scale-95"
 																		title="Sugerir data final baseada em dias úteis"
 																	>
