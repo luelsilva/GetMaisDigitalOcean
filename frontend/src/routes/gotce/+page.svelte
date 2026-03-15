@@ -64,7 +64,7 @@
 		}
 	});
 
-	// Lógica para preencher Email e Matrícula quando o Professor é selecionado
+	// Lógica para preencher Email, Matrícula e CPF quando o Professor é selecionado
 	$effect(() => {
 		const selectedTeacherName = formValues['nome_professor'] || formValues['NomeProfessor'];
 		if (selectedTeacherName) {
@@ -72,6 +72,12 @@
 			if (teacher) {
 				formValues['email_professor'] = teacher.email;
 				formValues['matricula_professor'] = teacher.registration;
+				if (teacher.cpf) {
+					formValues['cpf_professor'] = teacher.cpf.replace(
+						/(\d{3})(\d{3})(\d{3})(\d{2})/,
+						'$1.$2.$3-$4'
+					);
+				}
 			}
 		}
 	});
@@ -423,8 +429,10 @@
 				courseSigla: formValues['sigla_curso'] || formValues['nome_curso'],
 				companyName: formValues['nome_empresa'],
 				companyCnpj: formValues['cnpj_empresa'],
-				startDate: formValues['data_inicio'],
-				endDate: formValues['data_final'],
+				startDate:
+					formValues['dt_inicio'] || formValues['data_inicio'] || formValues['DataInicio'] || null,
+				endDate:
+					formValues['dt_fim'] || formValues['data_final'] || formValues['DataFinal'] || null,
 				jsonData: formValues
 			};
 

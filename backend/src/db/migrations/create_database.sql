@@ -195,15 +195,16 @@ CREATE TABLE IF NOT EXISTS "courses" (
     CONSTRAINT "courses_sigla_unique" UNIQUE("sigla")
 );
 ALTER TABLE courses ENABLE ROW LEVEL SECURITY;
-
 CREATE TABLE IF NOT EXISTS "teachers" (
     "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     "registration" varchar(20) NOT NULL,
     "name" text NOT NULL,
     "email" varchar(255) NOT NULL,
+    "cpf" varchar(14) NOT NULL,
     "created_at" TIMESTAMPTZ DEFAULT now() NOT NULL,
     "updated_at" TIMESTAMPTZ DEFAULT now() NOT NULL,
-    CONSTRAINT "teachers_email_unique" UNIQUE("email")
+    CONSTRAINT "teachers_email_unique" UNIQUE("email"),
+    CONSTRAINT "teachers_cpf_unique" UNIQUE("cpf")
 );
 ALTER TABLE teachers ENABLE ROW LEVEL SECURITY;
 

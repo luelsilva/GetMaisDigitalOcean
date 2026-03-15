@@ -77,6 +77,7 @@ const teachers = pgTable('teachers', {
     registration: varchar('registration', { length: 20 }).notNull().unique(),
     name: text('name').notNull(),
     email: varchar('email', { length: 255 }).notNull().unique(),
+    cpf: varchar('cpf', { length: 14 }).notNull().unique(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 });

@@ -30,16 +30,17 @@ exports.getTeacherById = async (req, res, next) => {
 // Criar novo professor
 exports.createTeacher = async (req, res, next) => {
     try {
-        const { registration, name, email } = req.body;
-        if (!registration || !name || !email) {
-            return res.status(400).json({ error: 'Matrícula, nome e email são obrigatórios' });
+        const { registration, name, email, cpf } = req.body;
+        if (!registration || !name || !email || !cpf) {
+            return res.status(400).json({ error: 'Matrícula, nome, email e cpf são obrigatórios' });
         }
 
         const result = await db.insert(teachers)
             .values({
                 registration,
                 name: formatarNome(name),
-                email: email.toLowerCase()
+                email: email.toLowerCase(),
+                cpf: cpf.replace(/\D/g, '') // Guarda só números
             })
             .returning();
         res.status(201).json(result[0]);
@@ -47,6 +48,7 @@ exports.createTeacher = async (req, res, next) => {
         if (error.code === '23505') {
             if (error.detail && error.detail.includes('registration')) return res.status(400).json({ error: 'Matrícula já cadastrada' });
             if (error.detail && error.detail.includes('email')) return res.status(400).json({ error: 'Email já cadastrado' });
+            if (error.detail && error.detail.includes('cpf')) return res.status(400).json({ error: 'CPF já cadastrado' });
             return res.status(400).json({ error: 'Dados duplicados' });
         }
         next(error);
@@ -57,12 +59,13 @@ exports.createTeacher = async (req, res, next) => {
 exports.updateTeacher = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const { registration, name, email } = req.body;
+        const { registration, name, email, cpf } = req.body;
 
         const updateData = { updatedAt: new Date() };
         if (registration) updateData.registration = registration;
         if (name) updateData.name = formatarNome(name);
         if (email) updateData.email = email.toLowerCase();
+        if (cpf) updateData.cpf = cpf.replace(/\D/g, ''); // Atualiza mantendo só dígitos
 
         const result = await db.update(teachers)
             .set(updateData)
@@ -75,6 +78,7 @@ exports.updateTeacher = async (req, res, next) => {
         if (error.code === '23505') {
             if (error.detail && error.detail.includes('registration')) return res.status(400).json({ error: 'Matrícula já em uso' });
             if (error.detail && error.detail.includes('email')) return res.status(400).json({ error: 'Email já em uso' });
+            if (error.detail && error.detail.includes('cpf')) return res.status(400).json({ error: 'CPF já em uso' });
             return res.status(400).json({ error: 'Dados duplicados' });
         }
         next(error);
