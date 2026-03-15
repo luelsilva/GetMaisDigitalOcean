@@ -106,7 +106,7 @@
 									</div>
 
 									<div class="py-1">
-										{#if $user?.roles === 'company'}
+										<!-- {#if $user?.roles === 'company'}
 											<a
 												href="/company/view"
 												class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-blue-600"
@@ -114,7 +114,7 @@
 											>
 												📂 Meus Estágios
 											</a>
-										{/if}
+										{/if} -->
 										{#if $user?.roles && ['teacher', 'admin', 'sudo'].includes($user.roles)}
 											<a
 												href="/estagio"
