@@ -144,13 +144,12 @@ exports.createInternship = async (req, res, next) => {
             jsonData
         } = req.body;
 
-        // Validações básicas
         if (!studentName) return res.status(400).json({ error: 'Nome do aluno é obrigatório' });
         if (!courseSigla) return res.status(400).json({ error: 'Sigla do curso é obrigatória' });
 
         const [newInternship] = await db.insert(internships).values({
-            userId: req.user.id, // Salva o ID do usuário que criou (responsável)
-            studentRegistration,
+            userId: req.user.id,
+            studentRegistration: studentRegistration || null,
             studentName,
             courseSigla,
             companyName,
@@ -180,17 +179,37 @@ exports.updateInternship = async (req, res, next) => {
             jsonData
         } = req.body;
 
-        const updateSet = {
-            studentRegistration,
-            studentName,
-            courseSigla,
-            companyName,
-            startDate: startDate || null,
-            endDate: endDate || null,
-            jsonData,
-            updatedAt: new Date(),
-            lastModifiedBy: req.user.id
-        };
+
+        const updateSet = {};
+        
+        // Função de limpeza profunda para tipos específicos
+        const toNull = (val) => (val === undefined || val === null || (typeof val === 'string' && val.trim() === '')) ? null : val;
+
+
+        if (studentRegistration !== undefined) {
+            const val = toNull(studentRegistration);
+            // Se for nulo ou não for um número válido, enviamos NULL real
+            updateSet.studentRegistration = (val === null || isNaN(Number(val))) ? null : Number(val);
+        }
+        
+        if (studentName !== undefined) {
+            const val = toNull(studentName);
+            if (val) updateSet.studentName = val;
+        }
+        
+        if (courseSigla !== undefined) {
+            const val = toNull(courseSigla);
+            if (val) updateSet.courseSigla = val;
+        }
+        
+        if (companyName !== undefined) updateSet.companyName = toNull(companyName);
+        if (startDate !== undefined) updateSet.startDate = toNull(startDate);
+        if (endDate !== undefined) updateSet.endDate = toNull(endDate);
+        if (jsonData !== undefined) updateSet.jsonData = jsonData;
+        
+        updateSet.updatedAt = new Date();
+        updateSet.lastModifiedBy = req.user.id;
+
         const whereConditions = [eq(internships.id, id), isNull(internships.deletedAt)];
 
         const [internship] = await db.select()

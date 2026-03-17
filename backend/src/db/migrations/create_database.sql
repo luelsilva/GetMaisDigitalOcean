@@ -392,7 +392,9 @@ BEGIN
     END IF;
     RETURN NULL;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+ALTER TABLE internships_history DISABLE ROW LEVEL SECURITY;
 
 DROP TRIGGER IF EXISTS trigger_log_internships ON internships;
 

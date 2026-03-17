@@ -425,19 +425,22 @@
 		saveSuccess = false;
 
 		try {
+			const cleanVal = (val) => (val === undefined || val === null || String(val).trim() === "") ? null : val;
+
 			const internshipData = {
-				studentRegistration: formValues['matricula_aluno']
-					? Number(formValues['matricula_aluno'])
-					: null,
-				studentName: formValues['nome_aluno'],
-				courseSigla: formValues['sigla_curso'] || formValues['nome_curso'],
-				companyName: formValues['nome_empresa'],
-				startDate:
-					formValues['dt_inicio'] || formValues['data_inicio'] || formValues['DataInicio'] || null,
-				endDate:
-					formValues['dt_fim'] || formValues['data_final'] || formValues['DataFinal'] || null,
+				studentRegistration: cleanVal(formValues['matricula_aluno'] || formValues['matricula'] || formValues['MatriculaAluno']),
+				studentName: cleanVal(formValues['nome_aluno'] || formValues['NomeAluno']) || pageData.internship?.studentName,
+				courseSigla: cleanVal(formValues['sigla_curso'] || formValues['nome_curso']) || pageData.internship?.courseSigla,
+				companyName: cleanVal(formValues['nome_empresa'] || formValues['NomeEmpresa'] || formValues['razao_social'] || formValues['empresa']) || pageData.internship?.companyName,
+				startDate: cleanVal(formValues['dt_inicio'] || formValues['data_inicio'] || formValues['DataInicio']),
+				endDate: cleanVal(formValues['dt_fim'] || formValues['data_final'] || formValues['DataFinal']),
 				jsonData: formValues
 			};
+
+			// Converter matrícula para número se existir
+			if (internshipData.studentRegistration) {
+				internshipData.studentRegistration = Number(internshipData.studentRegistration);
+			}
 
 			console.log('📦 [DEBUG SAVE PAYLOAD]:', internshipData);
 
