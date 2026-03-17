@@ -11,7 +11,6 @@
 		studentName: string;
 		courseSigla: string;
 		companyName: string;
-		companyCnpj: string | null;
 		startDate: string;
 		endDate: string;
 		jsonData: any;

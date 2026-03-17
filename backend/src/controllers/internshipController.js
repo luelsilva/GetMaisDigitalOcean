@@ -5,7 +5,7 @@ const { eq, desc, asc, or, ilike, sql, and, isNull } = require('drizzle-orm');
 // Listar todos os estágios com suporte a busca e paginação
 exports.getAllInternships = async (req, res, next) => {
     try {
-        const { page, limit, search } = req.query;
+        const { page, limit, search, teacher } = req.query;
 
         const queryFields = {
             id: internships.id,
@@ -14,7 +14,6 @@ exports.getAllInternships = async (req, res, next) => {
             studentName: internships.studentName,
             courseSigla: internships.courseSigla,
             companyName: internships.companyName,
-            companyCnpj: internships.companyCnpj,
             startDate: internships.startDate,
             endDate: internships.endDate,
             jsonData: internships.jsonData,
@@ -28,15 +27,22 @@ exports.getAllInternships = async (req, res, next) => {
         const baseFilter = isNull(internships.deletedAt);
         let whereClause = baseFilter;
 
+        // Filtro por Professor (dentro do JSON)
+        if (teacher) {
+            whereClause = and(
+                whereClause,
+                sql`${internships.jsonData}->>'nome_professor' = ${teacher}`
+            );
+        }
+
         // Se houver busca
         if (search) {
             const searchTerm = `%${search}%`;
             whereClause = and(
-                baseFilter,
+                whereClause, // Usa as condições anteriores (inclusive o teacher se houver)
                 or(
                     ilike(internships.studentName, searchTerm),
                     ilike(internships.companyName, searchTerm),
-                    ilike(internships.companyCnpj, searchTerm),
                     sql`${internships.studentRegistration}::text ILIKE ${searchTerm}`
                 )
             );
@@ -103,7 +109,6 @@ exports.getInternshipById = async (req, res, next) => {
             studentName: internships.studentName,
             courseSigla: internships.courseSigla,
             companyName: internships.companyName,
-            companyCnpj: internships.companyCnpj,
             startDate: internships.startDate,
             endDate: internships.endDate,
             jsonData: internships.jsonData,
@@ -134,7 +139,6 @@ exports.createInternship = async (req, res, next) => {
             studentName,
             courseSigla,
             companyName,
-            companyCnpj,
             startDate,
             endDate,
             jsonData
@@ -150,7 +154,6 @@ exports.createInternship = async (req, res, next) => {
             studentName,
             courseSigla,
             companyName,
-            companyCnpj,
             startDate: startDate || null,
             endDate: endDate || null,
             jsonData,
@@ -172,7 +175,6 @@ exports.updateInternship = async (req, res, next) => {
             studentName,
             courseSigla,
             companyName,
-            companyCnpj,
             startDate,
             endDate,
             jsonData
@@ -183,7 +185,6 @@ exports.updateInternship = async (req, res, next) => {
             studentName,
             courseSigla,
             companyName,
-            companyCnpj,
             startDate: startDate || null,
             endDate: endDate || null,
             jsonData,
@@ -250,30 +251,4 @@ exports.deleteInternship = async (req, res, next) => {
     }
 };
 
-// Obter ID do estágio por detalhes (público)
-exports.getInternshipIdByDetails = async (req, res, next) => {
-    try {
-        const { registration, cnpj } = req.query;
 
-        if (!registration || !cnpj) {
-            return res.status(400).json({ error: 'Parâmetros registration e cnpj são obrigatórios' });
-        }
-
-        const result = await db.select({ id: internships.id })
-            .from(internships)
-            .where(and(
-                eq(internships.studentRegistration, Number(registration)),
-                eq(internships.companyCnpj, cnpj),
-                isNull(internships.deletedAt)
-            ))
-            .limit(1);
-
-        if (result.length === 0) {
-            return res.status(404).json({ error: 'Estágio não encontrado com os dados fornecidos' });
-        }
-
-        res.json({ id: result[0].id });
-    } catch (error) {
-        next(error);
-    }
-};

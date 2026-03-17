@@ -117,7 +117,6 @@ const internships = pgTable('internships', {
     studentName: text('student_name').notNull(),
     courseSigla: text('course_sigla').notNull(),
     companyName: text('company_name').notNull(),
-    companyCnpj: text('company_cnpj').notNull(),
     startDate: date('start_date'),
     endDate: date('end_date'),
     jsonData: jsonb('json_data'),

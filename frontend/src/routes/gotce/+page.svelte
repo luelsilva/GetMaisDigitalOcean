@@ -387,7 +387,7 @@
 					formValues[key] = suggestedDate;
 				}
 			});
-			
+
 			// Se o targetId foi passado, garante que ele está marcado como modificado
 			markAsModified();
 
@@ -432,7 +432,6 @@
 				studentName: formValues['nome_aluno'],
 				courseSigla: formValues['sigla_curso'] || formValues['nome_curso'],
 				companyName: formValues['nome_empresa'],
-				companyCnpj: formValues['cnpj_empresa'],
 				startDate:
 					formValues['dt_inicio'] || formValues['data_inicio'] || formValues['DataInicio'] || null,
 				endDate:

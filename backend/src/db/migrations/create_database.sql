@@ -308,7 +308,6 @@ CREATE TABLE IF NOT EXISTS "internships" (
     "student_name" text NOT NULL,
     "course_sigla" text NOT NULL,
     "company_name" text NULL,
-    "company_cnpj" text NULL,
     "start_date" date NULL,
     "end_date" date NULL,
     "json_data" jsonb NULL,
@@ -349,7 +348,6 @@ CREATE TABLE IF NOT EXISTS "internships_history" (
     "student_name" text,
     "course_sigla" text,
     "company_name" text,
-    "company_cnpj" text,
     "start_date" date,
     "end_date" date,
 
@@ -369,12 +367,12 @@ BEGIN
         INSERT INTO internships_history (
             internship_id, operation, changed_at,
             user_id, student_registration, student_name, course_sigla, 
-            company_name, company_cnpj, start_date, end_date, json_data, 
+            company_name, start_date, end_date, json_data, 
             created_at, updated_at, last_modified_by
         ) VALUES (
             OLD.id, 'D', NOW(),
             OLD.user_id, OLD.student_registration, OLD.student_name, OLD.course_sigla, 
-            OLD.company_name, OLD.company_cnpj, OLD.start_date, OLD.end_date, OLD.json_data, 
+            OLD.company_name, OLD.start_date, OLD.end_date, OLD.json_data, 
             OLD.created_at, OLD.updated_at, OLD.last_modified_by
         );
         RETURN OLD;
@@ -382,12 +380,12 @@ BEGIN
         INSERT INTO internships_history (
             internship_id, operation, changed_at,
             user_id, student_registration, student_name, course_sigla, 
-            company_name, company_cnpj, start_date, end_date, json_data, 
+            company_name, start_date, end_date, json_data, 
             created_at, updated_at, last_modified_by
         ) VALUES (
             OLD.id, 'U', NOW(),
             OLD.user_id, OLD.student_registration, OLD.student_name, OLD.course_sigla, 
-            OLD.company_name, OLD.company_cnpj, OLD.start_date, OLD.end_date, OLD.json_data, 
+            OLD.company_name, OLD.start_date, OLD.end_date, OLD.json_data, 
             OLD.created_at, OLD.updated_at, OLD.last_modified_by
         );
         RETURN NEW;

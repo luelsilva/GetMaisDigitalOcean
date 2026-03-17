@@ -12,7 +12,6 @@
 		studentName: string;
 		courseSigla: string;
 		companyName: string;
-		companyCnpj: string | null;
 		startDate: string;
 		endDate: string;
 		printDate: string | null;
@@ -25,9 +24,10 @@
 	let isLoading = true;
 	let error: string | null = null;
 	let totalRecords = 0;
-	let selectedInternship: Internship | null = null;
 	let isDeleting = false;
 	let isDeletingId: string | null = null;
+	let teachers: any[] = []; // Lista de professores
+	let selectedTeacher = ''; // Professor selecionado para filtro
 
 	// Filtros e Paginação (Server-side)
 	let searchTerm = '';
@@ -43,7 +43,8 @@
 			const query = new URLSearchParams({
 				page: String(currentPage),
 				limit: String(pageSize),
-				search: searchTerm
+				search: searchTerm,
+				teacher: selectedTeacher
 			});
 
 			const response = await apiFetch(`/internships?${query.toString()}`);
@@ -85,13 +86,32 @@
 				}
 			});
 
-			await fetchInternships();
+			await Promise.all([
+				fetchInternships(),
+				fetchTeachers()
+			]);
 		});
 
 		return () => {
 			if (unsubscribe) unsubscribe();
 		};
 	});
+
+	async function fetchTeachers() {
+		try {
+			const res = await apiFetch('/teachers');
+			if (res.ok) {
+				teachers = await res.json();
+			}
+		} catch (e) {
+			console.error('Erro ao carregar professores:', e);
+		}
+	}
+
+	function handleFilterChange() {
+		currentPage = 1;
+		fetchInternships();
+	}
 
 	function handleSearch() {
 		clearTimeout(searchTimeout);
@@ -151,13 +171,7 @@
 		}
 	}
 
-	function viewDetails(item: Internship) {
-		selectedInternship = item;
-	}
 
-	function closeDetails() {
-		selectedInternship = null;
-	}
 </script>
 
 <svelte:head>
@@ -203,6 +217,17 @@
 						/>
 					</svg>
 				</div>
+
+				<select
+					bind:value={selectedTeacher}
+					onchange={handleFilterChange}
+					class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500 md:w-64"
+				>
+					<option value="">Filtrar por Professor (Todos)</option>
+					{#each teachers as t (t.id)}
+						<option value={t.name}>{t.name}</option>
+					{/each}
+				</select>
 
 				<select
 					bind:value={pageSize}
@@ -285,11 +310,7 @@
 							{#each internships as item, i (item.id)}
 								<tr
 									in:fly={{ x: -10, duration: 300, delay: i * 20 }}
-									class="group cursor-pointer transition-colors hover:bg-indigo-50/30"
-									onclick={() => viewDetails(item)}
-									onkeydown={(e) => e.key === 'Enter' && viewDetails(item)}
-									role="button"
-									tabindex="0"
+									class="group transition-colors hover:bg-indigo-50/30"
 								>
 									<td class="px-6 py-4 font-mono text-sm text-slate-600"
 										>{item.studentRegistration || '-'}</td
@@ -465,123 +486,7 @@
 	</div>
 </div>
 
-{#if selectedInternship}
-	<div
-		class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm"
-		transition:fade={{ duration: 200 }}
-		onclick={closeDetails}
-		onkeydown={(e) => e.key === 'Escape' && closeDetails()}
-		role="button"
-		tabindex="-1"
-		aria-label="Fechar modal"
-	>
-		<div
-			class="world-full max-w-2xl overflow-hidden rounded-3xl bg-white shadow-2xl"
-			transition:fly={{ y: 20, duration: 300 }}
-			onclick={(e) => e.stopPropagation()}
-			onkeydown={(e) => e.stopPropagation()}
-			role="presentation"
-		>
-			<header
-				class="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-8 py-6"
-			>
-				<div>
-					<h2 class="text-xl font-black text-slate-800">Detalhes do Estágio</h2>
-					<p class="text-sm font-medium text-slate-500">Informações completas do contrato</p>
-				</div>
-				<button
-					class="rounded-full p-2 transition-colors hover:bg-slate-200"
-					onclick={closeDetails}
-					title="Fechar"
-					aria-label="Fechar Detalhes"
-				>
-					<svg class="h-6 w-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M6 18L18 6M6 6l12 12"
-						/>
-					</svg>
-				</button>
-			</header>
 
-			<div class="max-h-[70vh] space-y-6 overflow-y-auto p-8">
-				<div class="grid grid-cols-1 gap-6 md:grid-cols-2">
-					<div class="space-y-1">
-						<span class="block text-xs font-black tracking-wider text-slate-400 uppercase"
-							>Aluno</span
-						>
-						<p class="font-bold text-slate-800">{selectedInternship.studentName}</p>
-						<p class="font-mono text-sm text-slate-500">
-							Matrícula: {selectedInternship.studentRegistration}
-						</p>
-					</div>
-					<div class="space-y-1">
-						<span class="block text-xs font-black tracking-wider text-slate-400 uppercase"
-							>Curso</span
-						>
-						<p class="font-bold text-slate-800">{selectedInternship.courseSigla}</p>
-					</div>
-					<div class="space-y-1">
-						<span class="block text-xs font-black tracking-wider text-slate-400 uppercase"
-							>Empresa</span
-						>
-						<p class="font-bold text-slate-800">{selectedInternship.companyName}</p>
-						{#if selectedInternship.companyCnpj}
-							<p class="font-mono text-sm text-slate-500">
-								CNPJ: {selectedInternship.companyCnpj}
-							</p>
-						{/if}
-					</div>
-					<div class="space-y-1">
-						<span class="block text-xs font-black tracking-wider text-slate-400 uppercase"
-							>Período</span
-						>
-						<p class="font-bold text-slate-800">
-							{formatDate(selectedInternship.startDate)} até {formatDate(
-								selectedInternship.endDate
-							)}
-						</p>
-					</div>
-				</div>
-
-				{#if selectedInternship.jsonData}
-					<div class="space-y-3">
-						<span class="block text-xs font-black tracking-wider text-slate-400 uppercase"
-							>Dados Adicionais (JSON)</span
-						>
-						<div class="overflow-x-auto rounded-2xl bg-slate-900 p-4">
-							<pre class="font-mono text-xs text-indigo-300">{JSON.stringify(
-									selectedInternship.jsonData,
-									null,
-									2
-								)}</pre>
-						</div>
-					</div>
-				{/if}
-
-				<div
-					class="flex items-center justify-between border-t border-slate-100 pt-4 text-xs text-slate-400"
-				>
-					<span>Criado em: {new Date(selectedInternship.createdAt).toLocaleString()}</span>
-					<span>ID: {selectedInternship.id}</span>
-				</div>
-			</div>
-
-			<footer class="grid grid-cols-1 gap-4 border-t border-slate-100 bg-slate-50 px-8 py-6">
-				<div class="flex items-end">
-					<button
-						class="w-full rounded-xl bg-indigo-600 py-3 font-black text-white shadow-lg shadow-indigo-200 transition-all hover:bg-indigo-700"
-						onclick={closeDetails}
-					>
-						Fechar Detalhes
-					</button>
-				</div>
-			</footer>
-		</div>
-	</div>
-{/if}
 
 <style>
 	/* Estilos Premium */
