@@ -18,7 +18,7 @@ const getDatabaseUrl = () => {
 
 // Criar cliente PostgreSQL otimizado para serverless ou local
 const client = postgres(getDatabaseUrl(), {
-    max: process.env.NODE_ENV === 'production' ? 1 : 10, // 1 para serverless, 10 para desenvolvimento local
+    max: process.env.NODE_ENV === 'production' ? 10 : 10, // Aumentado para 10 em produção (Droplet não é serverless)
     idle_timeout: 20, // Fechar conexão após 20s de inatividade
     connect_timeout: 10, // Timeout de conexão de 10s
     prepare: false // Desabilitar prepared statements para compatibilidade com pgBouncer

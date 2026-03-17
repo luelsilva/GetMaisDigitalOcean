@@ -14,18 +14,17 @@ const {
 } = require('../utils/validators');
 
 // Aplicar limitadores híbridos
-router.use(authBurstyLimiter); // Proteção por IP mas com margem maior
-router.use(strictAuthLimiter); // Proteção rígida por Usuário + IP
+router.use(authBurstyLimiter); // Proteção por IP mas com margem maior (100 requisições / 15 min)
 
 // Rotas de Autenticação
 router.get('/me', authenticateToken, authController.me);
-router.post('/register', validate(registerSchema), authController.register);
-router.post('/verify-otp', validate(otpSchema), authController.verifyOtp);
-router.post('/resend-otp', validate(emailOnlySchema), authController.resendOtp);
-router.post('/forgot-password', validate(emailOnlySchema), authController.forgotPassword);
-router.post('/reset-password', validate(resetPasswordSchema), authController.resetPassword);
-router.post('/login', validate(loginSchema), authController.login);
-router.post('/login-or-register-company', authController.loginOrRegisterCompany);
+router.post('/register', strictAuthLimiter, validate(registerSchema), authController.register);
+router.post('/verify-otp', strictAuthLimiter, validate(otpSchema), authController.verifyOtp);
+router.post('/resend-otp', strictAuthLimiter, validate(emailOnlySchema), authController.resendOtp);
+router.post('/forgot-password', strictAuthLimiter, validate(emailOnlySchema), authController.forgotPassword);
+router.post('/reset-password', strictAuthLimiter, validate(resetPasswordSchema), authController.resetPassword);
+router.post('/login', strictAuthLimiter, validate(loginSchema), authController.login);
+router.post('/login-or-register-company', strictAuthLimiter, authController.loginOrRegisterCompany);
 router.post('/refresh', authController.refresh);
 router.post('/logout', authenticateToken, authController.logout);
 router.post('/change-password', authenticateToken, authController.changePassword);

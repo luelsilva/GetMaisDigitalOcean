@@ -7,6 +7,7 @@ const { globalLimiter } = require('./middleware/rateLimiter');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
+app.set('trust proxy', 1);
 
 // Middlewares de Segurança e Configuração
 app.use(helmet());
