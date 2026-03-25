@@ -1,5 +1,10 @@
 FROM node:20-slim
 
+# Instala o LibreOffice necessário para a conversão de DOCX para PDF
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libreoffice \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 # Copy package files
