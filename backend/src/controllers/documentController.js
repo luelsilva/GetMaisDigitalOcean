@@ -2,12 +2,11 @@ const path = require('path');
 const fs = require('fs');
 const PizZip = require('pizzip');
 const Docxtemplater = require('docxtemplater');
-const CloudConvert = require('cloudconvert');
 const os = require('os');
+const libre = require('libreoffice-convert');
+const util = require('util');
 
-// Instancia CloudConvert: você vai precisar colocar a sua chave real no .env (CLOUDCONVERT_API_KEY)
-// Ou substituir a string 'SUA_CHAVE_AQUI' abaixo pela chave copiada do site
-const cloudConvert = new CloudConvert(process.env.CLOUDCONVERT_API_KEY || 'SUA_CHAVE_AQUI');
+libre.convertAsync = util.promisify(libre.convert);
 
 /**
  * Controller para geração de documentos locais (.docx)
@@ -102,45 +101,8 @@ const generatePdf = async (req, res) => {
             compression: 'DEFLATE',
         });
 
-        // 2. Salva o DOCX processado no disco temporário para enviar pro CloudConvert
-        const tempDocxPath = path.join(os.tmpdir(), `doc-${Date.now()}-${Math.floor(Math.random() * 1000)}.docx`);
-        fs.writeFileSync(tempDocxPath, buf);
-
-        // 3. Monta e dispara a rotina (Job) do CloudConvert
-        let job = await cloudConvert.jobs.create({
-            tasks: {
-                'import-my-file': {
-                    operation: 'import/upload'
-                },
-                'convert-my-file': {
-                    operation: 'convert',
-                    input: 'import-my-file',
-                    output_format: 'pdf'
-                },
-                'export-my-file': {
-                    operation: 'export/url',
-                    input: 'convert-my-file'
-                }
-            }
-        });
-
-        // 4. Faz o upload do arquivo temporário pra tarefa
-        const uploadTask = job.tasks.filter(t => t.name === 'import-my-file')[0];
-        await cloudConvert.tasks.upload(uploadTask, fs.createReadStream(tempDocxPath), 'document.docx');
-
-        // 5. Aguarda o trabalho do CloudConvert finalizar e clica o exportUrl
-        job = await cloudConvert.jobs.wait(job.id);
-        const exportTask = job.tasks.filter(t => t.name === 'export-my-file')[0];
-        
-        const fileResultUrl = exportTask.result.files[0].url;
-
-        // 6. Faz o download do PDF pronto pro Buffer 
-        const pdfResponse = await fetch(fileResultUrl);
-        const pdfArrayBuffer = await pdfResponse.arrayBuffer();
-        const pdfBuffer = Buffer.from(pdfArrayBuffer);
-
-        // Limpa o arquivo temporário silenciosamente
-        try { fs.unlinkSync(tempDocxPath); } catch (e) { }
+        // 2. Converte o buffer gerado (.docx) diretamente para PDF localmente com o LibreOffice
+        const pdfBuffer = await libre.convertAsync(buf, '.pdf', undefined);
 
         // 7. Envia pro navegado baixar
         res.setHeader('Content-Type', 'application/pdf');
@@ -152,15 +114,8 @@ const generatePdf = async (req, res) => {
         res.send(pdfBuffer);
 
     } catch (error) {
-        console.error('Erro ao gerar PDF CloudConvert:', error);
-        
-        let errorMessage = error.message || 'Erro desconhecido';
-        // Se for erro da API do CloudConvert, ele pode vir com uma estrutura de resposta
-        if (error.response && error.response.data && error.response.data.message) {
-            errorMessage = error.response.data.message;
-        }
-
-        res.status(500).json({ error: 'Falha ao processar PDF via CloudConvert: ' + errorMessage });
+        console.error('Erro ao gerar PDF localmente:', error);
+        res.status(500).json({ error: 'Falha ao processar PDF via LibreOffice: ' + (error.message || 'Erro desconhecido') });
     }
 };
 
