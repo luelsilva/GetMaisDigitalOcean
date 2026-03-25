@@ -215,11 +215,6 @@
 	}
 
 	async function handleSubmit(type = 'pdf') {
-		if (type === 'pdf' && !form.googleDocsId) {
-			alert('Este formulário não possui um Google Docs ID configurado para gerar PDF via Google.');
-			return;
-		}
-
 		submitting = true;
 		// Limpa links anteriores ao iniciar nova geração
 		if (type === 'pdf') {
@@ -373,7 +368,7 @@
 			<form
 				onsubmit={(e) => {
 					e.preventDefault();
-					handleSubmit('docx');
+					handleSubmit('pdf');
 				}}
 				class="myform-form"
 			>
@@ -473,36 +468,61 @@
 
 				<div class="mt-8 flex w-full flex-col items-center gap-4">
 					{#if pageData.mode !== 'view'}
-						<div class="flex w-full max-w-md justify-center">
+						<div class="flex w-full max-w-md justify-center gap-4 flex-col sm:flex-row">
 							<button
 								type="submit"
 								disabled={submitting}
-								class="btn-submit w-full"
+								class="btn-submit w-full flex-1"
+								style="background-color: #dc2626"
+							>
+								{#if submitting}
+									<span class="mr-2 animate-spin">🌀</span> Processando...
+								{:else}
+									📕 Gerar PDF
+								{/if}
+							</button>
+
+							<button
+								type="button"
+                                onclick={() => handleSubmit('docx')}
+								disabled={submitting}
+								class="btn-submit w-full flex-1"
 								style="background-color: #2b579a"
 							>
 								{#if submitting}
 									<span class="mr-2 animate-spin">🌀</span> Processando...
 								{:else}
-									📄 Gerar Documento (Word)
+									📘 Gerar Word
 								{/if}
 							</button>
 						</div>
 					{/if}
 
-					{#if successLinkDocx}
+					{#if successLink || successLinkDocx}
 						<div
 							class="w-full max-w-md rounded-2xl border-2 border-blue-500 bg-white p-6 text-center shadow-xl"
 							in:fade
 						>
 							<p class="mb-4 font-bold text-blue-700">✨ Arquivo pronto!</p>
-							<div class="flex justify-center gap-2">
+							<div class="flex flex-col sm:flex-row justify-center gap-3">
+                                {#if successLink}
+								<a
+									href={successLink}
+									download={`${pageData.modelId} - ${lastGeneratedName}.pdf`}
+									class="btn-action bg-red-600 hover:bg-red-700 w-full"
+								>
+									📥 Baixar PDF
+								</a>
+                                {/if}
+                                {#if successLinkDocx}
 								<a
 									href={successLinkDocx}
 									download={`${pageData.modelId} - ${lastGeneratedName}.docx`}
-									class="btn-action bg-blue-600 hover:bg-blue-700"
+									class="btn-action bg-blue-600 hover:bg-blue-700 w-full"
 								>
-									📥 Baixar Word (.docx)
+									📥 Baixar Word
 								</a>
+                                {/if}
 							</div>
 						</div>
 					{/if}

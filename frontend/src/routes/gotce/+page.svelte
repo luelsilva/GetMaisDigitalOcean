@@ -19,6 +19,7 @@
 	let formValues = $state<Record<string, any>>({});
 	let submitting = $state(false);
 	let successLink = $state('');
+	let successLinkDocx = $state('');
 
 	let saving = $state(false);
 	let saveSuccess = $state(false);
@@ -482,7 +483,7 @@
 		}
 	}
 
-	async function handleSubmit() {
+	async function handleSubmit(type = 'pdf') {
 		// Se o formulário tiver modificações pendentes, salve primeiro antes de gerar
 		if (formModified) {
 			await handleSave();
@@ -495,6 +496,13 @@
 		syncTurno();
 		await checkInternshipPeriod();
 		submitting = true;
+		if (type === 'pdf') {
+			if (successLink) URL.revokeObjectURL(successLink);
+			successLink = '';
+		} else {
+			if (successLinkDocx) URL.revokeObjectURL(successLinkDocx);
+			successLinkDocx = '';
+		}
 		try {
 			const dataToSubmit = { ...formValues };
 			const allKeys = Object.keys(formValues);
@@ -574,17 +582,23 @@
 				data: dataToSubmit
 			};
 
-			console.log('📄 [DEBUG DOCX PAYLOAD]:', payload);
+			console.log('📄 [DEBUG PAYLOAD]:', payload);
+            const endpoint = type === 'pdf' ? '/documentos/gerar-pdf' : '/documentos/gerar-docx';
 
-			const res = await apiFetch('/documentos/gerar-docx', {
+			const res = await apiFetch(endpoint, {
 				method: 'POST',
 				body: JSON.stringify(payload)
 			});
 
 			if (res.ok) {
 				const blob = await res.blob();
-				if (successLink) URL.revokeObjectURL(successLink);
-				successLink = URL.createObjectURL(blob);
+				if (type === 'pdf') {
+                    if (successLink) URL.revokeObjectURL(successLink);
+					successLink = URL.createObjectURL(blob);
+				} else {
+                    if (successLinkDocx) URL.revokeObjectURL(successLinkDocx);
+					successLinkDocx = URL.createObjectURL(blob);
+				}
 			} else {
 				const err = await res.json();
 				showToast('Erro ao gerar documento: ' + (err.error || 'Erro desconhecido'), 'error');
@@ -618,7 +632,7 @@
 			<form
 				onsubmit={(e) => {
 					e.preventDefault();
-					handleSubmit();
+					handleSubmit('pdf');
 				}}
 				class="myform-form"
 			>
@@ -729,7 +743,7 @@
 				</div>
 
 				<div class="mt-8 flex w-full flex-col items-center gap-4">
-					<div class="flex w-full max-w-2xl gap-4">
+					<div class="flex w-full max-w-2xl gap-4 flex-col sm:flex-row">
 						<button
 							type="button"
 							onclick={handleSave}
@@ -750,28 +764,55 @@
 							type="submit"
 							disabled={submitting}
 							class="btn-submit flex-1"
-							style="background-color: {form.tituloColor}"
+							style="background-color: #dc2626"
 						>
 							{#if submitting}
-								<span class="mr-2 animate-spin">🌀</span> Gerando documento...
+								<span class="mr-2 animate-spin">🌀</span> Processando...
 							{:else}
-								📄 Gerar Documento (Word)
+								📕 Gerar PDF
+							{/if}
+						</button>
+
+						<button
+							type="button"
+                            onclick={() => handleSubmit('docx')}
+							disabled={submitting}
+							class="btn-submit flex-1"
+							style="background-color: #2b579a"
+						>
+							{#if submitting}
+								<span class="mr-2 animate-spin">🌀</span> Processando...
+							{:else}
+								📘 Gerar Word
 							{/if}
 						</button>
 					</div>
 
-					{#if successLink}
+					{#if successLink || successLinkDocx}
 						<div
-							class="w-full max-w-md rounded-2xl border-2 border-blue-500 bg-white p-6 text-center shadow-xl"
+							class="w-full max-w-md rounded-2xl border-2 border-blue-500 bg-white p-6 text-center shadow-xl gap-4 flex flex-col"
 							in:fade
 						>
 							<p class="mb-4 font-bold text-blue-700">✨ Documento pronto!</p>
-							<div class="flex justify-center gap-2">
+							<div class="flex flex-col sm:flex-row justify-center gap-3">
+                                {#if successLink}
 								<a
 									href={successLink}
+									download={`1501-${formValues['nome_aluno'] || formValues['NomeAluno'] || 'documento'}.pdf`}
+									class="btn-action bg-red-600 hover:bg-red-700 w-full"
+                                >
+                                    📥 Baixar PDF
+                                </a>
+                                {/if}
+                                {#if successLinkDocx}
+								<a
+									href={successLinkDocx}
 									download={`1501-${formValues['nome_aluno'] || formValues['NomeAluno'] || 'documento'}.docx`}
-									class="btn-action bg-blue-600 hover:bg-blue-700">📥 Baixar Word (.docx)</a
-								>
+									class="btn-action bg-blue-600 hover:bg-blue-700 w-full"
+                                >
+                                    📥 Baixar Word
+                                </a>
+                                {/if}
 							</div>
 						</div>
 					{/if}

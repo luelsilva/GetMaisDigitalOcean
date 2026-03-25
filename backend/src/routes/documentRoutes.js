@@ -6,7 +6,8 @@ const { authenticateToken, authorizeRoles } = require('../middleware/authMiddlew
 // Aplicar autenticação e roles para todas as rotas de documentos
 router.use(authenticateToken, authorizeRoles('company', 'teacher', 'admin', 'sudo'));
 
-// Única rota de geração de documentos ativa atualmente
+// Rotas de geração de documentos ativas
 router.post('/gerar-docx', documentController.generateDocx);
+router.post('/gerar-pdf', documentController.generatePdf);
 
 module.exports = router;
