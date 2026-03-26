@@ -186,6 +186,22 @@
 		}
 	}
 
+	function handleTextareaKeydown(event: KeyboardEvent, maxRows: number) {
+		const textarea = event.currentTarget as HTMLTextAreaElement;
+		const lines = textarea.value.split('\n');
+		if (event.key === 'Enter' && lines.length >= maxRows) {
+			event.preventDefault();
+		}
+	}
+
+	function handleTextareaInput(event: Event, maxRows: number) {
+		const textarea = event.currentTarget as HTMLTextAreaElement;
+		const lines = textarea.value.split('\n');
+		if (lines.length > maxRows) {
+			textarea.value = lines.slice(0, maxRows).join('\n');
+		}
+	}
+
 	async function handleCepLookup(inputId: string, cepValue: string) {
 		const cep = cepValue.replace(/\D/g, '');
 		let suffix = '';
@@ -665,10 +681,15 @@
 														{#if inputType === 'textarea'}
 															<textarea
 																id={inputId}
-																class="col-input min-h-[100px]"
+																class="col-input"
+																style="min-height: {col.nRows ? col.nRows * 1.6 + 'rem' : '6rem'}"
+																rows={col.nRows || undefined}
+																maxlength={col.totalChar || undefined}
 																bind:value={formValues[inputId]}
 																required={col.required !== false}
 																onchange={markAsModified}
+																onkeydown={col.nRows ? (e) => handleTextareaKeydown(e, col.nRows) : undefined}
+																oninput={col.nRows ? (e) => handleTextareaInput(e, col.nRows) : undefined}
 															></textarea>
 														{:else if inputType === 'select'}
 															<select

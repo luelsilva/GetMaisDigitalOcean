@@ -1,4 +1,4 @@
-﻿<script lang="ts">
+<script lang="ts">
     import { onMount } from 'svelte';
     import { fade } from 'svelte/transition';
     import { apiFetch } from '$lib/api';
@@ -647,6 +647,8 @@
                                                                                                             <th class="p-2 border-b">Label</th>
                                                                                                             <th class="p-2 border-b">Select Options (JSON)</th>
                                                                                                             <th class="p-2 border-b text-center">Width</th>
+                                                                                                            <th class="p-2 border-b text-center" title="Máximo de linhas (textarea)">nRows</th>
+                                                                                                            <th class="p-2 border-b text-center" title="Máximo de caracteres">totalChar</th>
                                                                                                             <th class="p-2 border-b text-center">Req</th>
                                                                                                             <th class="p-2 border-b text-right">Ações</th>
                                                                                                         </tr>
@@ -703,6 +705,12 @@
                                                                                                                 </td>
                                                                                                                 <td class="p-2 text-center">
                                                                                                                     <input type="text" value={col.width} onblur={(e) => updateCol(form, sIdx, rIdx, cIdx, 'width', e.currentTarget.value)} class="w-10 bg-transparent border-none text-xs p-0 text-center focus:ring-0 text-gray-500 font-mono" />
+                                                                                                                </td>
+                                                                                                                <td class="p-2 text-center">
+                                                                                                                    <input type="number" value={col.nRows ?? ''} onblur={(e) => updateCol(form, sIdx, rIdx, cIdx, 'nRows', e.currentTarget.value !== '' ? Number(e.currentTarget.value) : undefined)} class="w-12 bg-transparent border-none text-xs p-0 text-center focus:ring-0 text-gray-500 font-mono" placeholder="-" min="1" />
+                                                                                                                </td>
+                                                                                                                <td class="p-2 text-center">
+                                                                                                                    <input type="number" value={col.totalChar ?? ''} onblur={(e) => updateCol(form, sIdx, rIdx, cIdx, 'totalChar', e.currentTarget.value !== '' ? Number(e.currentTarget.value) : undefined)} class="w-12 bg-transparent border-none text-xs p-0 text-center focus:ring-0 text-gray-500 font-mono" placeholder="-" min="1" />
                                                                                                                 </td>
                                                                                                                 <td class="p-2 text-center">
                                                                                                                     <input type="checkbox" checked={col.required !== false} onchange={(e) => updateCol(form, sIdx, rIdx, cIdx, 'required', e.currentTarget.checked)} class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" />
