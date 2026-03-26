@@ -51,9 +51,14 @@
 		<a href="/" class="flex items-center space-x-4">
 			<img src="/logo-cedup.png" alt="Logo Cedup" class="w-16 object-contain" />
 			<div class="flex flex-col">
-				<h1 class="text-2xl leading-none font-bold tracking-tight text-blue-900">
-					CEDUP Joinville
-				</h1>
+				<div class="flex items-baseline space-x-2">
+					<h1 class="text-2xl leading-none font-bold tracking-tight text-blue-900">
+						CEDUP Joinville
+					</h1>
+					<span class="text-[10px] font-bold text-blue-400/80 font-mono tracking-tighter">
+						v{import.meta.env.VITE_VERSION}
+					</span>
+				</div>
 				<span class="text-xs font-medium tracking-wide text-gray-500 uppercase"
 					>Centro de Educação Profissional</span
 				>
