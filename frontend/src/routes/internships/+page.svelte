@@ -18,33 +18,53 @@
 		jsonData: any;
 		createdAt: string;
 		updatedAt: string;
+		status: 'DRAFT' | 'WAITING_APPROVAL' | 'REVISION_REQUESTED' | 'APPROVED' | 'STARTED';
 	}
 
-	let internships: Internship[] = [];
-	let isLoading = true;
-	let error: string | null = null;
-	let totalRecords = 0;
-	let isDeleting = false;
-	let isDeletingId: string | null = null;
-	let teachers: any[] = []; // Lista de professores
-	let selectedTeacher = ''; // Professor selecionado para filtro
+	interface Teacher {
+		id: string;
+		name: string;
+		email: string;
+		registration: string;
+	}
+
+	let internships = $state<Internship[]>([]);
+	let isLoading = $state(false);
+	let error = $state<string | null>(null);
+	let totalRecords = $state(0);
+	let isDeleting = $state(false);
+	let isDeletingId = $state<string | null>(null);
+	let teachers = $state<Teacher[]>([]); 
+	let selectedTeacher = $state(''); 
+	let selectedStatus = $state(''); 
 
 	// Filtros e Paginação (Server-side)
-	let searchTerm = '';
-	let pageSize = 25;
-	let currentPage = 1;
-	let searchTimeout: NodeJS.Timeout;
+	let searchTerm = $state('');
+	let searchName = $state('');
+	let pageSize = $state(25);
+	let currentPage = $state(1);
+
+	let statusCounts = $state({
+		DRAFT: 0,
+		WAITING_APPROVAL: 0,
+		REVISION_REQUESTED: 0,
+		APPROVED: 0,
+		STARTED: 0,
+		TOTAL: 0
+	});
 
 	async function fetchInternships() {
-		if (isLoading && internships.length > 0) return; // Evita múltiplas chamadas simultâneas se já houver dados
+		if (isLoading && internships.length > 0) return;
 
 		isLoading = true;
 		try {
 			const query = new URLSearchParams({
 				page: String(currentPage),
-				limit: String(pageSize),
+				limit: String(pageSize.toString()),
 				search: searchTerm,
-				teacher: selectedTeacher
+				studentName: searchName,
+				teacher: selectedTeacher,
+				status: selectedStatus
 			});
 
 			const response = await apiFetch(`/internships?${query.toString()}`);
@@ -58,13 +78,45 @@
 					internships = result;
 					totalRecords = result.length;
 				}
+
+				// Atualizar métricas (para simplicidade, calculamos a partir do total se o backend não enviar)
+				// Em um cenário real, você poderia ter um endpoint /internships/metrics
+				updateMetrics();
 			} else {
 				error = 'Erro ao carregar estágios do servidor.';
 			}
-		} catch (e) {
+		} catch {
 			error = 'Houve um problema de conexão com o servidor.';
 		} finally {
 			isLoading = false;
+		}
+	}
+
+	async function updateMetrics() {
+		try {
+			// Usamos os mesmos filtros da busca, MAS sem o filtro de status (para ver a distribuição entre todos os status)
+			const query = new URLSearchParams({
+				limit: '2000', // Limite alto para pegar todos os registros filtrados
+				search: searchTerm,
+				studentName: searchName,
+				teacher: selectedTeacher
+			});
+
+			const res = await apiFetch(`/internships?${query.toString()}`);
+			if (res.ok) {
+				const all = await res.json();
+				const list = Array.isArray(all) ? all : (all.data || []);
+				
+				const counts = { DRAFT: 0, WAITING_APPROVAL: 0, REVISION_REQUESTED: 0, APPROVED: 0, STARTED: 0, TOTAL: list.length };
+				list.forEach((item: Internship) => {
+					if (counts[item.status as keyof typeof counts] !== undefined) {
+						(counts[item.status as keyof typeof counts] as number)++;
+					}
+				});
+				statusCounts = counts;
+			}
+		} catch {
+			console.error('Erro ao atualizar métricas');
 		}
 	}
 
@@ -87,7 +139,6 @@
 			});
 
 			await Promise.all([
-				fetchInternships(),
 				fetchTeachers()
 			]);
 		});
@@ -103,22 +154,20 @@
 			if (res.ok) {
 				teachers = await res.json();
 			}
-		} catch (e) {
-			console.error('Erro ao carregar professores:', e);
+		} catch {
+			console.error('Erro ao carregar professores');
 		}
 	}
 
-	function handleFilterChange() {
-		currentPage = 1;
-		fetchInternships();
+	function handleSearch(event: KeyboardEvent) {
+		if (event.key === 'Enter') {
+			triggerSearch();
+		}
 	}
 
-	function handleSearch() {
-		clearTimeout(searchTimeout);
-		searchTimeout = setTimeout(() => {
-			currentPage = 1;
-			fetchInternships();
-		}, 500);
+	function triggerSearch() {
+		currentPage = 1;
+		fetchInternships();
 	}
 
 	function handlePageSizeChange() {
@@ -131,7 +180,29 @@
 		return new Date(dateStr).toLocaleDateString('pt-BR');
 	}
 
-	$: totalPages = Math.ceil(totalRecords / pageSize);
+	function getStatusLabel(status: string) {
+		const labels: Record<string, string> = {
+			DRAFT: 'Novos em edição',
+			WAITING_APPROVAL: 'Aguardando aprovação do professor',
+			REVISION_REQUESTED: 'Aguardando revisão da empresa',
+			APPROVED: 'Aprovado',
+			STARTED: 'Iniciado'
+		};
+		return labels[status] || status;
+	}
+
+	function getStatusBadgeClass(status: string) {
+		const classes: Record<string, string> = {
+			DRAFT: 'bg-slate-100 text-slate-600 border-slate-200',
+			WAITING_APPROVAL: 'bg-amber-100 text-amber-700 border-amber-200',
+			REVISION_REQUESTED: 'bg-rose-100 text-rose-700 border-rose-200',
+			APPROVED: 'bg-indigo-100 text-indigo-700 border-indigo-200',
+			STARTED: 'bg-emerald-100 text-emerald-700 border-emerald-200'
+		};
+		return classes[status] || 'bg-gray-100 text-gray-600 border-gray-200';
+	}
+
+	let totalPages = $derived(Math.ceil(totalRecords / pageSize));
 
 	function changePage(page: number) {
 		if (page >= 1 && page <= totalPages) {
@@ -182,25 +253,28 @@
 	<div class="mx-auto max-w-7xl space-y-6">
 		<!-- Header Section -->
 		<header
-			class="flex flex-col justify-between gap-4 rounded-2xl border border-slate-100 bg-white p-6 shadow-sm md:flex-row md:items-center"
+			class="flex flex-col gap-4 rounded-2xl border border-slate-100 bg-white p-6 shadow-sm"
 		>
-			<div>
-				<h1 class="text-2xl font-black tracking-tight text-slate-800">
-					CEDUP - Lista de Estagiários
-				</h1>
-				<p class="text-sm font-medium text-slate-500">
-					Gerenciamento e consulta de contratos de estágio
-				</p>
+			<div class="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+				<div>
+					<h1 class="text-2xl font-black tracking-tight text-slate-800">
+						CEDUP - Lista de Estagiários
+					</h1>
+					<p class="text-sm font-medium text-slate-500">
+						Gerenciamento e consulta de contratos de estágio
+					</p>
+				</div>
 			</div>
 
-			<div class="flex items-center gap-3">
-				<div class="relative flex-1 md:w-80">
+			<!-- Linha 1 de Filtros (Buscas Textuais) -->
+			<div class="flex flex-col gap-3 md:flex-row">
+				<div class="relative flex-1">
 					<input
 						type="text"
-						placeholder="Buscar por matrícula, nome ou empresa..."
+						placeholder="Busca geral (matrícula, empresa...)"
 						class="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pr-4 pl-10 text-sm transition-all outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
 						bind:value={searchTerm}
-						oninput={handleSearch}
+						onkeydown={handleSearch}
 					/>
 					<svg
 						class="absolute top-2.5 left-3 h-4 w-4 text-slate-400"
@@ -218,29 +292,124 @@
 					</svg>
 				</div>
 
+				<div class="relative flex-1">
+					<input
+						type="text"
+						placeholder="Buscar especificamente por NOME..."
+						class="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pr-4 pl-10 text-sm transition-all outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
+						bind:value={searchName}
+						onkeydown={handleSearch}
+					/>
+					<svg
+						class="absolute top-2.5 left-3 h-4 w-4 text-slate-400"
+						xmlns="http://www.w3.org/2000/svg"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke="currentColor"
+					>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+					</svg>
+				</div>
+			</div>
+
+			<!-- Linha 2 de Filtros (Categorias e Ações) -->
+			<div class="flex flex-wrap items-center gap-3">
 				<select
 					bind:value={selectedTeacher}
-					onchange={handleFilterChange}
 					class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500 md:w-64"
 				>
-					<option value="">Filtrar por Professor (Todos)</option>
+					<option value="">Professor (Todos)</option>
 					{#each teachers as t (t.id)}
 						<option value={t.name}>{t.name}</option>
 					{/each}
 				</select>
 
 				<select
+					bind:value={selectedStatus}
+					class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+				>
+					<option value="">Status (Todos)</option>
+					<option value="DRAFT">Novos em edição</option>
+					<option value="WAITING_APPROVAL">Aguardando aprovação do professor</option>
+					<option value="REVISION_REQUESTED">Aguardando revisão da empresa</option>
+					<option value="APPROVED">Aprovado</option>
+					<option value="STARTED">Iniciado</option>
+				</select>
+
+				<div class="flex-grow"></div>
+
+				<button
+					onclick={triggerSearch}
+					class="flex items-center gap-2 rounded-xl bg-indigo-600 px-8 py-2 text-sm font-black text-white transition-all hover:bg-indigo-700 active:scale-95 disabled:opacity-50"
+					disabled={isLoading}
+				>
+					{#if isLoading}
+						<div class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+					{:else}
+						<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+						</svg>
+					{/if}
+					Pesquisar
+				</button>
+
+				<div class="h-8 w-px bg-slate-200"></div>
+
+				<select
 					bind:value={pageSize}
 					onchange={handlePageSizeChange}
 					class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
 				>
-					<option value={10}>10 por pág.</option>
-					<option value={25}>25 por pág.</option>
-					<option value={50}>50 por pág.</option>
-					<option value={100}>100 por pág.</option>
+					<option value={10}>10</option>
+					<option value={25}>25</option>
+					<option value={50}>50</option>
+					<option value={100}>100</option>
 				</select>
 			</div>
 		</header>
+
+		<!-- Dashboard / Métricas -->
+		<div class="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6" in:fade>
+			<div class="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm transition-all hover:shadow-md">
+				<p class="text-[10px] font-black tracking-widest text-slate-400 uppercase">Total</p>
+				<p class="text-2xl font-black text-slate-800">{statusCounts.TOTAL}</p>
+			</div>
+			<div class="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm transition-all hover:shadow-md">
+				<p class="text-[10px] font-black tracking-widest text-slate-400 uppercase">Novos em edição</p>
+				<div class="flex items-center gap-2">
+					<p class="text-2xl font-black text-slate-600">{statusCounts.DRAFT}</p>
+					<span class="h-2 w-2 rounded-full bg-slate-400"></span>
+				</div>
+			</div>
+			<div class="rounded-2xl border border-amber-100 bg-white p-4 shadow-sm transition-all hover:shadow-md">
+				<p class="text-[10px] font-black tracking-widest text-amber-500 uppercase">Aguardando aprovação PROFESSOR</p>
+				<div class="flex items-center gap-2">
+					<p class="text-2xl font-black text-amber-700">{statusCounts.WAITING_APPROVAL}</p>
+					<span class="h-2 w-2 animate-pulse rounded-full bg-amber-500"></span>
+				</div>
+			</div>
+			<div class="rounded-2xl border border-rose-100 bg-white p-4 shadow-sm transition-all hover:shadow-md">
+				<p class="text-[10px] font-black tracking-widest text-rose-500 uppercase">Aguardando revisão EMPRESA</p>
+				<div class="flex items-center gap-2">
+					<p class="text-2xl font-black text-rose-700">{statusCounts.REVISION_REQUESTED}</p>
+					<span class="h-2 w-2 rounded-full bg-rose-500"></span>
+				</div>
+			</div>
+			<div class="rounded-2xl border border-indigo-100 bg-white p-4 shadow-sm transition-all hover:shadow-md">
+				<p class="text-[10px] font-black tracking-widest text-indigo-500 uppercase">Aprovados</p>
+				<div class="flex items-center gap-2">
+					<p class="text-2xl font-black text-indigo-700">{statusCounts.APPROVED}</p>
+					<span class="h-2 w-2 rounded-full bg-indigo-500"></span>
+				</div>
+			</div>
+			<div class="rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm transition-all hover:shadow-md">
+				<p class="text-[10px] font-black tracking-widest text-emerald-500 uppercase">Iniciados</p>
+				<div class="flex items-center gap-2">
+					<p class="text-2xl font-black text-emerald-700">{statusCounts.STARTED}</p>
+					<span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+				</div>
+			</div>
+		</div>
 
 		<!-- Main Content -->
 		<main
@@ -300,6 +469,9 @@
 								<th class="px-6 py-4 text-xs font-black tracking-wider text-slate-500 uppercase"
 									>Criado em</th
 								>
+								<th class="px-6 py-4 text-xs font-black tracking-wider text-slate-500 uppercase"
+									>Status</th
+								>
 								<th
 									class="px-6 py-4 text-center text-xs font-black tracking-wider text-slate-500 uppercase"
 									>Ações</th
@@ -350,6 +522,15 @@
 											minute: '2-digit'
 										})}</td
 									>
+									<td class="px-6 py-4">
+										<span
+											class="inline-flex items-center rounded-lg border px-2 py-1 text-[10px] font-black tracking-tight uppercase {getStatusBadgeClass(
+												item.status
+											)}"
+										>
+											{getStatusLabel(item.status)}
+										</span>
+									</td>
 									<td class="px-6 py-4 text-center">
 										<div class="flex items-center justify-center gap-2">
 											<a

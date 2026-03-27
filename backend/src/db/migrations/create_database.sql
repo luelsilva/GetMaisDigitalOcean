@@ -32,6 +32,10 @@ DO $$ BEGIN
     CREATE TYPE drive_item_type AS ENUM ('file', 'folder');
 EXCEPTION WHEN duplicate_object THEN null; END $$;
 
+DO $$ BEGIN
+    CREATE TYPE internship_status AS ENUM ('DRAFT', 'WAITING_APPROVAL', 'REVISION_REQUESTED', 'APPROVED', 'STARTED');
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+
 
 -- ============================================
 -- TABELA: keep_alive
@@ -314,7 +318,8 @@ CREATE TABLE IF NOT EXISTS "internships" (
     "created_at" TIMESTAMPTZ DEFAULT now() NOT NULL,
     "updated_at" TIMESTAMPTZ DEFAULT now() NOT NULL,
     "deleted_at" TIMESTAMPTZ,
-    "last_modified_by" UUID REFERENCES profiles(id) ON DELETE SET NULL
+    "last_modified_by" UUID REFERENCES profiles(id) ON DELETE SET NULL,
+    "status" internship_status DEFAULT 'DRAFT' NOT NULL
 );
 ALTER TABLE internships ENABLE ROW LEVEL SECURITY;
 
@@ -354,7 +359,8 @@ CREATE TABLE IF NOT EXISTS "internships_history" (
     "json_data" jsonb, -- Aqui fica o conteúdo completo do formulário
     "created_at" TIMESTAMPTZ,
     "updated_at" TIMESTAMPTZ,
-    "last_modified_by" UUID
+    "last_modified_by" UUID,
+    "status" internship_status
 );
 ALTER TABLE internships_history ENABLE ROW LEVEL SECURITY;
 
@@ -368,12 +374,12 @@ BEGIN
             internship_id, operation, changed_at,
             user_id, student_registration, student_name, course_sigla, 
             company_name, start_date, end_date, json_data, 
-            created_at, updated_at, last_modified_by
+            created_at, updated_at, last_modified_by, status
         ) VALUES (
             OLD.id, 'D', NOW(),
             OLD.user_id, OLD.student_registration, OLD.student_name, OLD.course_sigla, 
             OLD.company_name, OLD.start_date, OLD.end_date, OLD.json_data, 
-            OLD.created_at, OLD.updated_at, OLD.last_modified_by
+            OLD.created_at, OLD.updated_at, OLD.last_modified_by, OLD.status
         );
         RETURN OLD;
     ELSIF (TG_OP = 'UPDATE') THEN
@@ -381,12 +387,12 @@ BEGIN
             internship_id, operation, changed_at,
             user_id, student_registration, student_name, course_sigla, 
             company_name, start_date, end_date, json_data, 
-            created_at, updated_at, last_modified_by
+            created_at, updated_at, last_modified_by, status
         ) VALUES (
             OLD.id, 'U', NOW(),
             OLD.user_id, OLD.student_registration, OLD.student_name, OLD.course_sigla, 
             OLD.company_name, OLD.start_date, OLD.end_date, OLD.json_data, 
-            OLD.created_at, OLD.updated_at, OLD.last_modified_by
+            OLD.created_at, OLD.updated_at, OLD.last_modified_by, OLD.status
         );
         RETURN NEW;
     END IF;

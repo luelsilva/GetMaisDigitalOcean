@@ -5,7 +5,7 @@ const { eq, desc, asc, or, ilike, sql, and, isNull } = require('drizzle-orm');
 // Listar todos os estágios com suporte a busca e paginação
 exports.getAllInternships = async (req, res, next) => {
     try {
-        const { page, limit, search, teacher } = req.query;
+        const { page, limit, search, teacher, status, studentName } = req.query;
 
         const queryFields = {
             id: internships.id,
@@ -20,6 +20,7 @@ exports.getAllInternships = async (req, res, next) => {
             createdAt: internships.createdAt,
             updatedAt: internships.updatedAt,
             lastModifiedBy: internships.lastModifiedBy,
+            status: internships.status,
         };
 
         let query = db.select(queryFields).from(internships);
@@ -35,7 +36,23 @@ exports.getAllInternships = async (req, res, next) => {
             );
         }
 
-        // Se houver busca
+        // Filtro por Status
+        if (status) {
+            whereClause = and(
+                whereClause,
+                eq(internships.status, status)
+            );
+        }
+
+        // NOVO: Filtro específico por Nome do Aluno
+        if (studentName) {
+            whereClause = and(
+                whereClause,
+                ilike(internships.studentName, `%${studentName}%`)
+            );
+        }
+
+        // Se houver busca geral (Omnibox)
         if (search) {
             const searchTerm = `%${search}%`;
             whereClause = and(
@@ -58,7 +75,7 @@ exports.getAllInternships = async (req, res, next) => {
 
         query = query.where(whereClause);
 
-        query = query.orderBy(asc(internships.studentName), desc(internships.createdAt));
+        query = query.orderBy(asc(internships.studentName));
 
         // Paginação
         if (page && limit) {
@@ -115,6 +132,7 @@ exports.getInternshipById = async (req, res, next) => {
             createdAt: internships.createdAt,
             updatedAt: internships.updatedAt,
             lastModifiedBy: internships.lastModifiedBy,
+            status: internships.status,
         };
 
         const result = await db.select(queryFields)
@@ -141,7 +159,8 @@ exports.createInternship = async (req, res, next) => {
             companyName,
             startDate,
             endDate,
-            jsonData
+            jsonData,
+            status
         } = req.body;
 
         if (!studentName) return res.status(400).json({ error: 'Nome do aluno é obrigatório' });
@@ -156,6 +175,7 @@ exports.createInternship = async (req, res, next) => {
             startDate: startDate || null,
             endDate: endDate || null,
             jsonData,
+            status: status || 'DRAFT',
             lastModifiedBy: req.user.id
         }).returning();
 
@@ -176,7 +196,8 @@ exports.updateInternship = async (req, res, next) => {
             companyName,
             startDate,
             endDate,
-            jsonData
+            jsonData,
+            status
         } = req.body;
 
 
@@ -206,36 +227,83 @@ exports.updateInternship = async (req, res, next) => {
         if (startDate !== undefined) updateSet.startDate = toNull(startDate);
         if (endDate !== undefined) updateSet.endDate = toNull(endDate);
         if (jsonData !== undefined) updateSet.jsonData = jsonData;
+        if (status !== undefined) {
+            const newStatus = toNull(status) || 'DRAFT';
+            
+            // Buscar o estágio atual para verificar o status anterior e permissões
+            const [currentInternship] = await db.select()
+                .from(internships)
+                .where(eq(internships.id, id));
+
+            if (!currentInternship) {
+                return res.status(404).json({ error: 'Estágio não encontrado' });
+            }
+
+            const oldStatus = currentInternship.status;
+            const userRole = req.user.roles;
+            const isOwner = currentInternship.userId === req.user.id;
+            const isAuthority = ['teacher', 'admin', 'sudo'].includes(userRole);
+
+            // BLOQUEIO DE EDIÇÃO DE DADOS:
+            // Se não for autoridade e o estágio não estiver em edição (DRAFT/REVISION_REQUESTED),
+            // permitir APENAS a mudança de status (ex: cancelar submissão voltando para DRAFT)
+            // mas NÃO a mudança de dados do formulário (jsonData, etc)
+            const isEditableState = ['DRAFT', 'REVISION_REQUESTED'].includes(oldStatus);
+            
+            if (!isAuthority && !isEditableState) {
+                // Se tentou mudar qualquer campo que não seja 'status'
+                const fieldsBeingUpdated = Object.keys(updateSet).filter(k => k !== 'status' && k !== 'updatedAt' && k !== 'lastModifiedBy');
+                if (fieldsBeingUpdated.length > 0) {
+                    return res.status(403).json({ 
+                        error: `O estágio está no status ${oldStatus} e não pode mais ser editado. Volte para DRAFT para fazer alterações.` 
+                    });
+                }
+            }
+
+            // Se o status não mudou, ok
+            if (newStatus !== oldStatus) {
+                // REGRAS DE TRANSIÇÃO:
+                let allowed = false;
+
+                // 1. Autoridades podem fazer qualquer transição (por agora)
+                if (isAuthority) {
+                    allowed = true;
+                } 
+                // 2. Aluno/Empresa (Dono) só pode enviar para aprovação
+                else if (isOwner) {
+                    if ((oldStatus === 'DRAFT' || oldStatus === 'REVISION_REQUESTED') && newStatus === 'WAITING_APPROVAL') {
+                        allowed = true;
+                    }
+                    // Permitir voltar para DRAFT se ainda não foi aprovado? 
+                    // Geralmente sim, se quiser editar algo antes do professor ver.
+                    if (oldStatus === 'WAITING_APPROVAL' && newStatus === 'DRAFT') {
+                        allowed = true;
+                    }
+                }
+
+                if (!allowed) {
+                    return res.status(403).json({ 
+                        error: `Você não tem permissão para mudar o status de ${oldStatus} para ${newStatus}.` 
+                    });
+                }
+
+                updateSet.status = newStatus;
+            }
+        }
         
         updateSet.updatedAt = new Date();
         updateSet.lastModifiedBy = req.user.id;
 
         const whereConditions = [eq(internships.id, id), isNull(internships.deletedAt)];
 
-        const [internship] = await db.select()
-            .from(internships)
-            .where(and(...whereConditions));
-
-        if (!internship) {
-            return res.status(404).json({ error: 'Estágio não encontrado' });
-        }
-
-        // Se for company e não for o dono, verifica se tem permissão (já que removemos compartilhamento, só dono pode editar via API, mas na prática podemos liberar edição por pose do ID se desejado)
-        // Por enquanto, vou manter a restrição de que apenas o dono ou admin pode editar, ou liberar se for company (assumindo posse do link)
-        /*
-        if (req.user.roles === 'company' && internship.userId !== req.user.id) {
-             return res.status(403).json({ error: 'Você não tem permissão para editar este estágio' });
-        }
-        */
-        // Liberamos edição para company que tem o ID (Link Mágico), similar ao GET
-
+        // O Select inicial já foi feito para validação de status, mas mantemos o filtro de deletedAt aqui no update final por segurança
         const [updatedInternship] = await db.update(internships)
             .set(updateSet)
-            .where(eq(internships.id, id))
+            .where(and(...whereConditions))
             .returning();
 
         if (!updatedInternship) {
-            return res.status(404).json({ error: 'Estágio não encontrado' });
+            return res.status(404).json({ error: 'Estágio não encontrado ou não atualizado' });
         }
 
         res.json(updatedInternship);

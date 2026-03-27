@@ -6,6 +6,8 @@ const otpTypeEnum = pgEnum('otp_type', ['registration', 'password_reset']);
 // Enum para roles de usuário
 const userRolesEnum = pgEnum('user_role', ['generic', 'student', 'company', 'teacher', 'admin', 'sudo']);
 
+const internshipStatusEnum = pgEnum('internship_status', ['DRAFT', 'WAITING_APPROVAL', 'REVISION_REQUESTED', 'APPROVED', 'STARTED']);
+
 // Tabela de perfis de usuários
 const profiles = pgTable('profiles', {
     id: uuid('id').primaryKey().defaultRandom(),
@@ -123,7 +125,8 @@ const internships = pgTable('internships', {
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
-    lastModifiedBy: uuid('last_modified_by').references(() => profiles.id, { onDelete: 'set null' })
+    lastModifiedBy: uuid('last_modified_by').references(() => profiles.id, { onDelete: 'set null' }),
+    status: internshipStatusEnum('status').default('DRAFT').notNull()
 });
 
 module.exports = {

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { apiFetch } from '$lib/api';
+	import { user } from '$lib/stores/auth';
 	import { fade } from 'svelte/transition';
 	import { devNotes } from '$lib/stores/devNotes.svelte';
 
@@ -22,6 +23,8 @@
 	let successLinkDocx = $state('');
 
 	let saving = $state(false);
+	let statusUpdating = $state(false);
+	let currentStatus = $state<'DRAFT' | 'WAITING_APPROVAL' | 'REVISION_REQUESTED' | 'APPROVED' | 'STARTED'>('DRAFT');
 	let saveSuccess = $state(false);
 	let formModified = $state(false);
 
@@ -57,11 +60,16 @@
 		formValues['data_atual'] = new Date().toLocaleDateString('pt-BR');
 
 		// Se estiver em modo de edição, preenche o formulário com os dados do estágio
-		if (pageData.mode === 'edit' && pageData.internship && pageData.internship.jsonData) {
-			formValues = {
-				...formValues,
-				...pageData.internship.jsonData
-			};
+		if (pageData.mode === 'edit' && pageData.internship) {
+			if (pageData.internship.jsonData) {
+				formValues = {
+					...formValues,
+					...pageData.internship.jsonData
+				};
+			}
+			if (pageData.internship.status) {
+				currentStatus = pageData.internship.status as 'DRAFT' | 'WAITING_APPROVAL' | 'REVISION_REQUESTED' | 'APPROVED' | 'STARTED';
+			}
 		}
 	});
 
@@ -451,6 +459,7 @@
 				companyName: cleanVal(formValues['nome_empresa'] || formValues['NomeEmpresa'] || formValues['razao_social'] || formValues['empresa']) || pageData.internship?.companyName,
 				startDate: cleanVal(formValues['dt_inicio'] || formValues['data_inicio'] || formValues['DataInicio']),
 				endDate: cleanVal(formValues['dt_fim'] || formValues['data_final'] || formValues['DataFinal']),
+				status: currentStatus,
 				jsonData: formValues
 			};
 
@@ -491,8 +500,8 @@
 				const err = await response.json();
 				showToast('Erro ao salvar: ' + (err.error || 'Erro desconhecido'), 'error');
 			}
-		} catch (error) {
-			console.error(error);
+		} catch (err) {
+			console.error(err);
 			showToast('Erro de conexão ao salvar o estágio', 'error');
 		} finally {
 			saving = false;
@@ -619,13 +628,59 @@
 				const err = await res.json();
 				showToast('Erro ao gerar documento: ' + (err.error || 'Erro desconhecido'), 'error');
 			}
-		} catch (error) {
-			console.error(error);
+		} catch (err) {
+			console.error(err);
 			showToast('Erro de conexão ao gerar o documento', 'error');
 		} finally {
 			submitting = false;
 		}
 	}
+
+	async function updateStatus(newStatus: 'DRAFT' | 'WAITING_APPROVAL' | 'REVISION_REQUESTED' | 'APPROVED' | 'STARTED') {
+		if (pageData.mode === 'new') {
+			currentStatus = newStatus;
+			messageTip = "Status alterado. Salve o estágio para confirmar.";
+			return;
+		}
+
+		statusUpdating = true;
+		try {
+			const response = await apiFetch(`/internships/${pageData.internship.id}`, {
+				method: 'PUT',
+				body: JSON.stringify({ status: newStatus })
+			});
+
+			if (response.ok) {
+				currentStatus = newStatus;
+				showToast('Status atualizado com sucesso!', 'success');
+			} else {
+				showToast('Erro ao atualizar status', 'error');
+			}
+		} catch (err) {
+			console.error(err);
+			showToast('Erro de conexão ao atualizar status', 'error');
+		} finally {
+			statusUpdating = false;
+		}
+	}
+
+	let messageTip = $state('');
+
+	const statusLabels: Record<string, string> = {
+		DRAFT: 'Em Edição',
+		WAITING_APPROVAL: 'Aguardando Aprovação',
+		REVISION_REQUESTED: 'Revisão Solicitada',
+		APPROVED: 'Aprovado',
+		STARTED: 'Iniciado'
+	};
+
+	const statusColors: Record<string, string> = {
+		DRAFT: 'border-slate-200 bg-slate-100 text-slate-600',
+		WAITING_APPROVAL: 'border-amber-200 bg-amber-100 text-amber-700',
+		REVISION_REQUESTED: 'border-rose-200 bg-rose-100 text-rose-700',
+		APPROVED: 'border-indigo-200 bg-indigo-100 text-indigo-700',
+		STARTED: 'border-emerald-200 bg-emerald-100 text-emerald-700'
+	};
 </script>
 
 <svelte:head>
@@ -638,6 +693,76 @@
 			<h4 class="myform-titulo" style="color: {form.tituloColor}">
 				{form.titulo}
 			</h4>
+
+			<!-- TCE Status Badge & Controls -->
+			<div class="mb-6 flex flex-wrap items-center gap-4 rounded-xl border border-slate-100 bg-slate-50/50 p-4">
+				<div class="flex items-center gap-2">
+					<span class="text-xs font-black tracking-widest text-slate-400 uppercase">Status do TCE:</span>
+					<span class="rounded-lg border px-3 py-1 text-xs font-black uppercase {statusColors[currentStatus]}">
+						{statusLabels[currentStatus]}
+					</span>
+				</div>
+
+				<div class="h-4 w-px bg-slate-200 hidden md:block"></div>
+
+				<div class="flex flex-wrap items-center gap-2">
+					{#if currentStatus === 'DRAFT' || currentStatus === 'REVISION_REQUESTED'}
+						<button
+							type="button"
+							onclick={() => updateStatus('WAITING_APPROVAL')}
+							disabled={statusUpdating || saving}
+							class="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-amber-700 disabled:opacity-50"
+						>
+							{#if statusUpdating}🌀{:else}📤 Concluir e Enviar para Aprovação{/if}
+						</button>
+					{/if}
+
+					{#if (['teacher', 'admin', 'sudo'].includes($user?.roles ?? '')) && currentStatus === 'WAITING_APPROVAL'}
+						<button
+							type="button"
+							onclick={() => updateStatus('APPROVED')}
+							disabled={statusUpdating}
+							class="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-indigo-700 disabled:opacity-50"
+						>
+							✅ Aprovar TCE
+						</button>
+						<button
+							type="button"
+							onclick={() => updateStatus('REVISION_REQUESTED')}
+							disabled={statusUpdating}
+							class="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-rose-700 disabled:opacity-50"
+						>
+							❌ Solicitar Revisão
+						</button>
+					{/if}
+
+					{#if (['teacher', 'admin', 'sudo'].includes($user?.roles ?? '')) && currentStatus === 'APPROVED'}
+						<button
+							type="button"
+							onclick={() => updateStatus('STARTED')}
+							disabled={statusUpdating}
+							class="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+						>
+							🚀 Iniciar Estágio (Assinaturas OK)
+						</button>
+					{/if}
+
+					{#if currentStatus !== 'DRAFT' && (['teacher', 'admin', 'sudo'].includes($user?.roles ?? ''))}
+						<button
+							type="button"
+							onclick={() => updateStatus('DRAFT')}
+							disabled={statusUpdating}
+							class="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+						>
+							🔄 Voltar para Edição
+						</button>
+					{/if}
+				</div>
+
+				{#if messageTip}
+					<span class="text-[10px] font-bold text-amber-600 animate-pulse" transition:fade>{messageTip}</span>
+				{/if}
+			</div>
 
 			{#if form.description}
 				<p class="myform-description" style="color: {form.tituloColor}; opacity: 0.8;">
