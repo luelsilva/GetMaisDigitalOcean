@@ -75,7 +75,8 @@ exports.getAllInternships = async (req, res, next) => {
 
         query = query.where(whereClause);
 
-        query = query.orderBy(asc(internships.studentName));
+        // Ordenação estrita por nome (ignora maiúsculas/minúsculas e espaços em branco)
+        query = query.orderBy(asc(sql`lower(trim(${internships.studentName}))`));
 
         // Paginação
         if (page && limit) {
@@ -169,9 +170,9 @@ exports.createInternship = async (req, res, next) => {
         const [newInternship] = await db.insert(internships).values({
             userId: req.user.id,
             studentRegistration: studentRegistration || null,
-            studentName,
-            courseSigla,
-            companyName,
+            studentName: studentName?.trim(),
+            courseSigla: courseSigla?.trim(),
+            companyName: companyName?.trim(),
             startDate: startDate || null,
             endDate: endDate || null,
             jsonData,
@@ -203,32 +204,39 @@ exports.updateInternship = async (req, res, next) => {
 
         const updateSet = {};
         
-        // Função de limpeza profunda para tipos específicos
-        const toNull = (val) => (val === undefined || val === null || (typeof val === 'string' && val.trim() === '')) ? null : val;
+        // Função de limpeza profunda: remove espaços e converte vazios em NULL real
+        const clean = (val) => {
+            if (val === undefined || val === null) return null;
+            if (typeof val === 'string') {
+                const trimmed = val.trim();
+                return trimmed === '' ? null : trimmed;
+            }
+            return val;
+        };
 
 
         if (studentRegistration !== undefined) {
-            const val = toNull(studentRegistration);
+            const val = clean(studentRegistration);
             // Se for nulo ou não for um número válido, enviamos NULL real
             updateSet.studentRegistration = (val === null || isNaN(Number(val))) ? null : Number(val);
         }
         
         if (studentName !== undefined) {
-            const val = toNull(studentName);
+            const val = clean(studentName);
             if (val) updateSet.studentName = val;
         }
         
         if (courseSigla !== undefined) {
-            const val = toNull(courseSigla);
+            const val = clean(courseSigla);
             if (val) updateSet.courseSigla = val;
         }
         
-        if (companyName !== undefined) updateSet.companyName = toNull(companyName);
-        if (startDate !== undefined) updateSet.startDate = toNull(startDate);
-        if (endDate !== undefined) updateSet.endDate = toNull(endDate);
+        if (companyName !== undefined) updateSet.companyName = clean(companyName);
+        if (startDate !== undefined) updateSet.startDate = clean(startDate);
+        if (endDate !== undefined) updateSet.endDate = clean(endDate);
         if (jsonData !== undefined) updateSet.jsonData = jsonData;
         if (status !== undefined) {
-            const newStatus = toNull(status) || 'DRAFT';
+            const newStatus = clean(status) || 'DRAFT';
             
             // Buscar o estágio atual para verificar o status anterior e permissões
             const [currentInternship] = await db.select()

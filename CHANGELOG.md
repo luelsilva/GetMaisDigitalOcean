@@ -5,6 +5,12 @@ Todas as mudanças notáveis para o projeto **GetMaisDigitalOcean** serão docum
 O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
 e este projeto adere ao [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-03-27
+
+### Fixed
+- **Ordenação por Nome**: Corrigida falha na ordenação onde espaços em branco no início do nome ("espaços fantasmas") faziam registros furarem a ordem alfabética.
+- **Sanitização de Dados**: Implementado `trim()` automático na criação e atualização de estágios para os campos de Aluno e Empresa.
+
 ## [1.1.0] - 2026-03-27
 
 ### Added
