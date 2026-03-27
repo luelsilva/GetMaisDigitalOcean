@@ -237,25 +237,24 @@ exports.updateInternship = async (req, res, next) => {
         if (startDate !== undefined) updateSet.startDate = clean(startDate);
         if (endDate !== undefined) updateSet.endDate = clean(endDate);
         if (jsonData !== undefined) updateSet.jsonData = jsonData;
+
+        // BUSCAR DADOS ATUAIS PARA PERMISSÕES E LOG DE STATUS (Fora do if (status) para evitar ReferenceError)
+        const [currentInternship] = await db.select()
+            .from(internships)
+            .where(eq(internships.id, id));
+
+        if (!currentInternship) {
+            return res.status(404).json({ error: 'Estágio não encontrado' });
+        }
+
+        const oldStatus = currentInternship.status;
+        const userRole = req.user.roles;
+        const isOwner = String(currentInternship.userId) === String(req.user.id);
+        const isAuthority = ['teacher', 'admin', 'sudo'].includes(userRole);
+
         if (status !== undefined) {
             const newStatus = clean(status) || 'DRAFT';
             
-            // Buscar o estágio atual para verificar o status anterior e permissões
-            const [currentInternship] = await db.select()
-                .from(internships)
-                .where(eq(internships.id, id));
-
-            if (!currentInternship) {
-                return res.status(404).json({ error: 'Estágio não encontrado' });
-            }
-
-            const oldStatus = currentInternship.status;
-            const userRole = req.user.roles;
-            const isOwner = String(currentInternship.userId) === String(req.user.id);
-            const isAuthority = ['teacher', 'admin', 'sudo'].includes(userRole);
-
-            console.log(`[DEBUG UPDATE] User: ${req.user.id} (${userRole}), Owner: ${currentInternship.userId}, IsOwner: ${isOwner}, Status: ${oldStatus} -> ${newStatus || oldStatus}`);
-
             // BLOQUEIO DE EDIÇÃO DE DADOS:
             // Se não for autoridade e o estágio não estiver em edição (DRAFT/REVISION_REQUESTED),
             // permitir APENAS a mudança de status (ex: cancelar submissão voltando para DRAFT)
@@ -335,19 +334,28 @@ exports.updateInternship = async (req, res, next) => {
 
             // 2. Notificar o Professor (Orientador)
             if (teacherName) {
-                db.select({ email: profiles.email })
-                    .from(profiles)
-                    .where(eq(profiles.fullName, teacherName))
-                    .limit(1)
-                    .then(([prof]) => {
-                        if (prof && prof.email) {
-                            emailService.sendTCEWaitingApprovalToTeacher(prof.email, studentName, companyName, link)
-                                .catch(err => console.error('[EMAIL ERROR] Falha ao notificar professor:', err));
-                        } else {
-                            console.warn(`[EMAIL WARNING] E-mail do professor ${teacherName} não encontrado no banco.`);
-                        }
-                    })
-                    .catch(err => console.error('[DB ERROR] Falha ao buscar e-mail do professor:', err));
+                // Tenta pegar o e-mail do professor diretamente do formulário (mais robusto)
+                const formTeacherEmail = updatedInternship.jsonData?.email_professor || updatedInternship.jsonData?.EmailProfessor;
+
+                if (formTeacherEmail && formTeacherEmail.includes('@')) {
+                    emailService.sendTCEWaitingApprovalToTeacher(formTeacherEmail, studentName, companyName, link)
+                        .catch(err => console.error('[EMAIL ERROR] Falha ao notificar professor (pelo e-mail do form):', err));
+                } else {
+                    // Fallback: busca no banco pelo nome completo se não houver e-mail no formulário
+                    db.select({ email: profiles.email })
+                        .from(profiles)
+                        .where(eq(profiles.fullName, teacherName))
+                        .limit(1)
+                        .then(([prof]) => {
+                            if (prof && prof.email) {
+                                emailService.sendTCEWaitingApprovalToTeacher(prof.email, studentName, companyName, link)
+                                    .catch(err => console.error('[EMAIL ERROR] Falha ao notificar professor (pelo banco):', err));
+                            } else {
+                                console.warn(`[EMAIL WARNING] E-mail do professor ${teacherName} não encontrado no form nem no banco.`);
+                            }
+                        })
+                        .catch(err => console.error('[DB ERROR] Falha ao buscar e-mail do professor no banco:', err));
+                }
             }
         }
 
