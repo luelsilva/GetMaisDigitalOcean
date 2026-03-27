@@ -1,6 +1,8 @@
 const { db } = require('../db');
 const { internships, profiles } = require('../db/schema');
 const { eq, desc, asc, or, ilike, sql, and, isNull } = require('drizzle-orm');
+const emailService = require('../services/emailService');
+const config = require('../config');
 
 // Listar todos os estágios com suporte a busca e paginação
 exports.getAllInternships = async (req, res, next) => {
@@ -249,8 +251,10 @@ exports.updateInternship = async (req, res, next) => {
 
             const oldStatus = currentInternship.status;
             const userRole = req.user.roles;
-            const isOwner = currentInternship.userId === req.user.id;
+            const isOwner = String(currentInternship.userId) === String(req.user.id);
             const isAuthority = ['teacher', 'admin', 'sudo'].includes(userRole);
+
+            console.log(`[DEBUG UPDATE] User: ${req.user.id} (${userRole}), Owner: ${currentInternship.userId}, IsOwner: ${isOwner}, Status: ${oldStatus} -> ${newStatus || oldStatus}`);
 
             // BLOQUEIO DE EDIÇÃO DE DADOS:
             // Se não for autoridade e o estágio não estiver em edição (DRAFT/REVISION_REQUESTED),
@@ -277,8 +281,8 @@ exports.updateInternship = async (req, res, next) => {
                 if (isAuthority) {
                     allowed = true;
                 } 
-                // 2. Aluno/Empresa (Dono) só pode enviar para aprovação
-                else if (isOwner) {
+                // 2. Aluno/Empresa (Dono ou Empresa colaborando no preenchimento)
+                else if (isOwner || (userRole === 'company' && isEditableState)) {
                     if ((oldStatus === 'DRAFT' || oldStatus === 'REVISION_REQUESTED') && newStatus === 'WAITING_APPROVAL') {
                         allowed = true;
                     }
@@ -312,6 +316,39 @@ exports.updateInternship = async (req, res, next) => {
 
         if (!updatedInternship) {
             return res.status(404).json({ error: 'Estágio não encontrado ou não atualizado' });
+        }
+
+        // DISPARO DE E-MAILS (Gatilho: Submissão para Aprovação)
+        if (updateSet.status === 'WAITING_APPROVAL' && oldStatus !== 'WAITING_APPROVAL') {
+            const studentName = updatedInternship.studentName;
+            const companyName = updatedInternship.companyName;
+            const teacherName = updatedInternship.jsonData?.nome_professor || updatedInternship.jsonData?.NomeProfessor;
+            const baseUrl = config.corsOrigin[0] || 'http://localhost:5173';
+            const link = `${baseUrl}/gotce?id=${id}`;
+
+            // 1. Notificar a Empresa (Solicitante)
+            const companyEmail = req.user.email;
+            if (companyEmail) {
+                emailService.sendTCEWaitingApprovalToCompany(companyEmail, studentName, teacherName, link)
+                    .catch(err => console.error('[EMAIL ERROR] Falha ao notificar empresa:', err));
+            }
+
+            // 2. Notificar o Professor (Orientador)
+            if (teacherName) {
+                db.select({ email: profiles.email })
+                    .from(profiles)
+                    .where(eq(profiles.fullName, teacherName))
+                    .limit(1)
+                    .then(([prof]) => {
+                        if (prof && prof.email) {
+                            emailService.sendTCEWaitingApprovalToTeacher(prof.email, studentName, companyName, link)
+                                .catch(err => console.error('[EMAIL ERROR] Falha ao notificar professor:', err));
+                        } else {
+                            console.warn(`[EMAIL WARNING] E-mail do professor ${teacherName} não encontrado no banco.`);
+                        }
+                    })
+                    .catch(err => console.error('[DB ERROR] Falha ao buscar e-mail do professor:', err));
+            }
         }
 
         res.json(updatedInternship);

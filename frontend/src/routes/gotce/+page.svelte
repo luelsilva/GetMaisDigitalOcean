@@ -4,6 +4,7 @@
 	import { user } from '$lib/stores/auth';
 	import { fade } from 'svelte/transition';
 	import { devNotes } from '$lib/stores/devNotes.svelte';
+	import Modal from '$lib/components/Modal.svelte';
 
 	interface Props {
 		data: {
@@ -30,6 +31,8 @@
 
 	let toastMessage = $state('');
 	let toastType = $state<'success' | 'error'>('success');
+
+	let showApprovalModal = $state(false);
 
 	function showToast(message: string, type: 'success' | 'error' = 'success') {
 		toastMessage = message;
@@ -664,6 +667,27 @@
 		}
 	}
 
+	async function handleSubmitForApproval() {
+		// 1. Se houver alterações não salvas, salva primeiro
+		if (formModified) {
+			await handleSave();
+			// Se o salvamento falhou, não prossegue
+			if (!saveSuccess) return;
+		}
+
+		// 2. Abre o modal customizado de confirmação
+		showApprovalModal = true;
+	}
+
+	async function confirmApproval() {
+		showApprovalModal = false;
+		await updateStatus('WAITING_APPROVAL');
+	}
+
+	function cancelApproval() {
+		showApprovalModal = false;
+	}
+
 	let messageTip = $state('');
 
 	const statusLabels: Record<string, string> = {
@@ -694,75 +718,7 @@
 				{form.titulo}
 			</h4>
 
-			<!-- TCE Status Badge & Controls -->
-			<div class="mb-6 flex flex-wrap items-center gap-4 rounded-xl border border-slate-100 bg-slate-50/50 p-4">
-				<div class="flex items-center gap-2">
-					<span class="text-xs font-black tracking-widest text-slate-400 uppercase">Status do TCE:</span>
-					<span class="rounded-lg border px-3 py-1 text-xs font-black uppercase {statusColors[currentStatus]}">
-						{statusLabels[currentStatus]}
-					</span>
-				</div>
-
-				<div class="h-4 w-px bg-slate-200 hidden md:block"></div>
-
-				<div class="flex flex-wrap items-center gap-2">
-					{#if currentStatus === 'DRAFT' || currentStatus === 'REVISION_REQUESTED'}
-						<button
-							type="button"
-							onclick={() => updateStatus('WAITING_APPROVAL')}
-							disabled={statusUpdating || saving}
-							class="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-amber-700 disabled:opacity-50"
-						>
-							{#if statusUpdating}🌀{:else}📤 Concluir e Enviar para Aprovação{/if}
-						</button>
-					{/if}
-
-					{#if (['teacher', 'admin', 'sudo'].includes($user?.roles ?? '')) && currentStatus === 'WAITING_APPROVAL'}
-						<button
-							type="button"
-							onclick={() => updateStatus('APPROVED')}
-							disabled={statusUpdating}
-							class="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-indigo-700 disabled:opacity-50"
-						>
-							✅ Aprovar TCE
-						</button>
-						<button
-							type="button"
-							onclick={() => updateStatus('REVISION_REQUESTED')}
-							disabled={statusUpdating}
-							class="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-rose-700 disabled:opacity-50"
-						>
-							❌ Solicitar Revisão
-						</button>
-					{/if}
-
-					{#if (['teacher', 'admin', 'sudo'].includes($user?.roles ?? '')) && currentStatus === 'APPROVED'}
-						<button
-							type="button"
-							onclick={() => updateStatus('STARTED')}
-							disabled={statusUpdating}
-							class="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-emerald-700 disabled:opacity-50"
-						>
-							🚀 Iniciar Estágio (Assinaturas OK)
-						</button>
-					{/if}
-
-					{#if currentStatus !== 'DRAFT' && (['teacher', 'admin', 'sudo'].includes($user?.roles ?? ''))}
-						<button
-							type="button"
-							onclick={() => updateStatus('DRAFT')}
-							disabled={statusUpdating}
-							class="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
-						>
-							🔄 Voltar para Edição
-						</button>
-					{/if}
-				</div>
-
-				{#if messageTip}
-					<span class="text-[10px] font-bold text-amber-600 animate-pulse" transition:fade>{messageTip}</span>
-				{/if}
-			</div>
+			<!-- Status Badge movido para o final -->
 
 			{#if form.description}
 				<p class="myform-description" style="color: {form.tituloColor}; opacity: 0.8;">
@@ -888,6 +844,76 @@
 					{/each}
 				</div>
 
+				<!-- TCE Status Badge & Controls (Movido para aqui) -->
+				<div class="mt-8 flex flex-wrap items-center justify-center gap-4 rounded-xl border border-slate-100 bg-slate-50/50 p-6 shadow-inner">
+					<div class="flex items-center gap-2">
+						<span class="text-xs font-black tracking-widest text-slate-400 uppercase">Status Atual do TCE:</span>
+						<span class="rounded-lg border px-3 py-1 text-xs font-black uppercase {statusColors[currentStatus]}">
+							{statusLabels[currentStatus]}
+						</span>
+					</div>
+
+					<div class="h-4 w-px bg-slate-200 hidden md:block"></div>
+
+					<div class="flex flex-wrap items-center gap-2">
+						{#if currentStatus === 'DRAFT' || currentStatus === 'REVISION_REQUESTED'}
+							<button
+								type="button"
+								onclick={handleSubmitForApproval}
+								disabled={statusUpdating || saving}
+								class="rounded-lg bg-amber-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-amber-700 active:scale-95 disabled:opacity-50"
+							>
+								{#if statusUpdating || saving}🌀{:else}📤 Concluir e Enviar para Aprovação{/if}
+							</button>
+						{/if}
+
+						{#if (['teacher', 'admin', 'sudo'].includes($user?.roles ?? '')) && currentStatus === 'WAITING_APPROVAL'}
+							<button
+								type="button"
+								onclick={() => updateStatus('APPROVED')}
+								disabled={statusUpdating}
+								class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-indigo-700 active:scale-95 disabled:opacity-50"
+							>
+								✅ Aprovar TCE
+							</button>
+							<button
+								type="button"
+								onclick={() => updateStatus('REVISION_REQUESTED')}
+								disabled={statusUpdating}
+								class="rounded-lg bg-rose-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-rose-700 active:scale-95 disabled:opacity-50"
+							>
+								❌ Solicitar Revisão
+							</button>
+						{/if}
+
+						{#if (['teacher', 'admin', 'sudo'].includes($user?.roles ?? '')) && currentStatus === 'APPROVED'}
+							<button
+								type="button"
+								onclick={() => updateStatus('STARTED')}
+								disabled={statusUpdating}
+								class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700 active:scale-95 disabled:opacity-50"
+							>
+								🚀 Iniciar Estágio (Assinaturas OK)
+							</button>
+						{/if}
+
+						{#if currentStatus !== 'DRAFT' && (['teacher', 'admin', 'sudo'].includes($user?.roles ?? ''))}
+							<button
+								type="button"
+								onclick={() => updateStatus('DRAFT')}
+								disabled={statusUpdating}
+								class="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-600 shadow-sm transition hover:bg-slate-50 active:scale-95 disabled:opacity-50"
+							>
+								🔄 Voltar para Edição
+							</button>
+						{/if}
+					</div>
+
+					{#if messageTip}
+						<p class="w-full text-center text-xs font-bold text-amber-600 animate-pulse mt-1" transition:fade>{messageTip}</p>
+					{/if}
+				</div>
+
 				<div class="mt-8 flex w-full flex-col items-center gap-4">
 					<div class="flex w-full max-w-2xl gap-4 flex-col sm:flex-row">
 						<button
@@ -976,6 +1002,18 @@
 			<p class="font-bold">{toastMessage}</p>
 		</div>
 	{/if}
+
+	<!-- Modal de Confirmação de Envio -->
+	<Modal
+		show={showApprovalModal}
+		type="warning"
+		title="Confirmar Envio"
+		message="Atenção: O formulário será enviado para o professor realizar a conferência. Após o envio, você não poderá editar os dados até que o professor solicite uma revisão ou aprove o documento. Deseja enviar agora?"
+		confirmLabel="Sim, enviar agora"
+		cancelLabel="Voltar e revisar"
+		onConfirm={confirmApproval}
+		onCancel={cancelApproval}
+	/>
 {:else}
 	<div class="flex min-h-[70vh] items-center justify-center">
 		<p class="animate-pulse text-gray-500">Carregando formulário...</p>

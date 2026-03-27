@@ -3,7 +3,31 @@ const config = require('../config');
 
 const resend = new Resend(config.resend.apiKey);
 
+const fs = require('fs');
+const path = require('path');
+
 const emailService = {
+    /**
+     * Auxiliar para ler e processar templates HTML.
+     */
+    _renderTemplate: (templateName, data) => {
+        try {
+            const templatePath = path.join(__dirname, '..', 'templates', 'emails', `${templateName}.html`);
+            let html = fs.readFileSync(templatePath, 'utf8');
+            
+            // Substitui as chaves {{variable}} pelos dados reais
+            Object.keys(data).forEach(key => {
+                const regex = new RegExp(`{{${key}}}`, 'g');
+                html = html.replace(regex, data[key]);
+            });
+            
+            return html;
+        } catch (err) {
+            console.error('[EMAIL SERVICE] Erro ao carregar template:', templateName, err);
+            return null;
+        }
+    },
+
     /**
      * Envia o código OTP via e-mail utilizando Resend.
      * @param {string} to - E-mail do destinatário
@@ -53,6 +77,59 @@ const emailService = {
             return { success: false, error: err };
         }
     },
+
+    /**
+     * Notifica a empresa que o TCE foi enviado para aprovação.
+     */
+    sendTCEWaitingApprovalToCompany: async (to, studentName, teacherName, link) => {
+        try {
+            const html = emailService._renderTemplate('tce_company', {
+                studentName,
+                teacherName,
+                link,
+                year: new Date().getFullYear()
+            });
+
+            if (!html) throw new Error('Não foi possível carregar o template tce_company');
+
+            return await resend.emails.send({
+                from: config.resend.from,
+                to: to,
+                subject: `📤 TCE de ${studentName} enviado para aprovação`,
+                html: html
+            });
+        } catch (err) {
+            console.error('[EMAIL SERVICE] Erro ao enviar para empresa:', err);
+            return { success: false, error: err };
+        }
+    },
+
+    /**
+     * Notifica o professor que há um TCE aguardando análise.
+     */
+    sendTCEWaitingApprovalToTeacher: async (to, studentName, companyName, link) => {
+        try {
+            const html = emailService._renderTemplate('tce_teacher', {
+                studentName,
+                companyName,
+                link,
+                year: new Date().getFullYear()
+            });
+
+            if (!html) throw new Error('Não foi possível carregar o template tce_teacher');
+
+            return await resend.emails.send({
+                from: config.resend.from,
+                to: to,
+                cc: [config.resend.tceManagerEmail], // Cópia para o setor de estágios configurado
+                subject: `📝 Pendência de Análise: TCE de ${studentName}`,
+                html: html
+            });
+        } catch (err) {
+            console.error('[EMAIL SERVICE] Erro ao enviar para professor:', err);
+            return { success: false, error: err };
+        }
+    }
 };
 
 module.exports = emailService;
