@@ -173,13 +173,7 @@
 													>
 														👥 Usuários
 													</a>
-													<a
-														href="/sudo/db"
-														class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-blue-600"
-														on:click={() => (showDropdown = false)}
-													>
-														🗄️ Banco de Dados
-													</a>
+
 												{/if}
 											</div>
 										{/if}
