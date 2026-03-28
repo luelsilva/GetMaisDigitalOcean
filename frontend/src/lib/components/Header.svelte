@@ -68,21 +68,7 @@
 		<!-- Navigation Menu -->
 		<nav>
 			<ul class="flex items-center space-x-6">
-				<li>
-					<a
-						href="https://www.getmais.com.br/"
-						target="_blank"
-						rel="noopener noreferrer"
-						class="flex items-center gap-2 rounded-lg px-4 py-2 text-gray-600 transition-all hover:bg-blue-50 hover:text-blue-700"
-					>
-						<img src="/logo-getmais.svg" alt="GetMais" class="h-5 w-auto" />
-						<span
-							class="bg-gradient-to-r from-[#9333ea] to-[#f97316] bg-clip-text font-bold text-transparent"
-							>GetMais</span
-						>
-						<span class="font-medium">Vagas de Estágio e Emprego</span>
-					</a>
-				</li>
+
 
 				{#if !checkingAuth}
 					{#if $user}
