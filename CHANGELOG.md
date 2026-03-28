@@ -5,12 +5,19 @@ Todas as mudanças notáveis para o projeto **GetMaisDigitalOcean** serão docum
 O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
 e este projeto adere ao [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.2.0] - 2026-03-27
+## [1.2.1] - 2026-03-27
 
 ### Added
 - **Notificações por E-mail**: Implementado sistema de avisos automáticos via Resend para Empresa e Professor.
 - **Templates Dinâmicos**: Criada infraestrutura de e-mails em HTML para o fluxo de aprovação.
-- **CC Transparente**: E-mails para professores agora contam com cópia automática para o setor de estágios da SED.
+- **CC Transparente**: E-mails para professores agora contam com cópia automática configurável para o setor de estágios da SED.
+- **Modal de Confirmação**: Nova interface Svelte 5 para envio de formulário com salvamento automático.
+
+### Fixed
+- **Estabilidade do Backend**: Resolvido erro de referência e escopo que causava erro 500 no processamento de status.
+
+### Changed
+- **UX/UI**: Ocultado botão de "Solicitar Revisão" temporariamente até implementação completa do fluxo de justificativa.
 
 ## [1.1.1] - 2026-03-27
 

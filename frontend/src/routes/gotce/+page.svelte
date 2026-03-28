@@ -33,6 +33,7 @@
 	let toastType = $state<'success' | 'error'>('success');
 
 	let showApprovalModal = $state(false);
+	let showApproveTCEModal = $state(false);
 
 	function showToast(message: string, type: 'success' | 'error' = 'success') {
 		toastMessage = message;
@@ -688,6 +689,19 @@
 		showApprovalModal = false;
 	}
 
+	async function handleApproveTCE() {
+		showApproveTCEModal = true;
+	}
+
+	async function confirmApproveTCE() {
+		showApproveTCEModal = false;
+		await updateStatus('APPROVED');
+	}
+
+	function cancelApproveTCE() {
+		showApproveTCEModal = false;
+	}
+
 	let messageTip = $state('');
 
 	const statusLabels: Record<string, string> = {
@@ -870,12 +884,14 @@
 						{#if (['teacher', 'admin', 'sudo'].includes($user?.roles ?? '')) && currentStatus === 'WAITING_APPROVAL'}
 							<button
 								type="button"
-								onclick={() => updateStatus('APPROVED')}
+								onclick={handleApproveTCE}
 								disabled={statusUpdating}
 								class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-indigo-700 active:scale-95 disabled:opacity-50"
 							>
 								✅ Aprovar TCE
 							</button>
+							<!-- Botão desativado temporariamente - Implementar futuramente com fluxo de justificativa -->
+							<!-- 
 							<button
 								type="button"
 								onclick={() => updateStatus('REVISION_REQUESTED')}
@@ -884,6 +900,7 @@
 							>
 								❌ Solicitar Revisão
 							</button>
+							-->
 						{/if}
 
 						{#if (['teacher', 'admin', 'sudo'].includes($user?.roles ?? '')) && currentStatus === 'APPROVED'}
@@ -1013,6 +1030,18 @@
 		cancelLabel="Voltar e revisar"
 		onConfirm={confirmApproval}
 		onCancel={cancelApproval}
+	/>
+
+	<!-- Modal de Confirmação de Aprovação (Professor) -->
+	<Modal
+		show={showApproveTCEModal}
+		type="success"
+		title="Aprovar TCE"
+		message="Não esqueça de orientar a empresa a: imprimir o documento em 3 VIAS, colher as assinaturas físicas de todas as partes e trazer os documentos assinados na escola."
+		confirmLabel="Sim, Aprovar e Orientar"
+		cancelLabel="Voltar"
+		onConfirm={confirmApproveTCE}
+		onCancel={cancelApproveTCE}
 	/>
 {:else}
 	<div class="flex min-h-[70vh] items-center justify-center">
