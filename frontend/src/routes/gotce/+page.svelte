@@ -1,10 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { apiFetch } from '$lib/api';
-	import { user } from '$lib/stores/auth';
 	import { fade } from 'svelte/transition';
 	import { devNotes } from '$lib/stores/devNotes.svelte';
-	import Modal from '$lib/components/Modal.svelte';
 
 	interface Props {
 		data: {
@@ -24,16 +22,11 @@
 	let successLinkDocx = $state('');
 
 	let saving = $state(false);
-	let statusUpdating = $state(false);
-	let currentStatus = $state<'DRAFT' | 'WAITING_APPROVAL' | 'REVISION_REQUESTED' | 'APPROVED' | 'STARTED'>('DRAFT');
 	let saveSuccess = $state(false);
 	let formModified = $state(false);
 
 	let toastMessage = $state('');
 	let toastType = $state<'success' | 'error'>('success');
-
-	let showApprovalModal = $state(false);
-	let showApproveTCEModal = $state(false);
 
 	function showToast(message: string, type: 'success' | 'error' = 'success') {
 		toastMessage = message;
@@ -70,9 +63,6 @@
 					...formValues,
 					...pageData.internship.jsonData
 				};
-			}
-			if (pageData.internship.status) {
-				currentStatus = pageData.internship.status as 'DRAFT' | 'WAITING_APPROVAL' | 'REVISION_REQUESTED' | 'APPROVED' | 'STARTED';
 			}
 		}
 	});
@@ -463,7 +453,6 @@
 				companyName: cleanVal(formValues['nome_empresa'] || formValues['NomeEmpresa'] || formValues['razao_social'] || formValues['empresa']) || pageData.internship?.companyName,
 				startDate: cleanVal(formValues['dt_inicio'] || formValues['data_inicio'] || formValues['DataInicio']),
 				endDate: cleanVal(formValues['dt_fim'] || formValues['data_final'] || formValues['DataFinal']),
-				status: currentStatus,
 				jsonData: formValues
 			};
 
@@ -640,85 +629,7 @@
 		}
 	}
 
-	async function updateStatus(newStatus: 'DRAFT' | 'WAITING_APPROVAL' | 'REVISION_REQUESTED' | 'APPROVED' | 'STARTED') {
-		if (pageData.mode === 'new') {
-			currentStatus = newStatus;
-			messageTip = "Status alterado. Salve o estágio para confirmar.";
-			return;
-		}
 
-		statusUpdating = true;
-		try {
-			const response = await apiFetch(`/internships/${pageData.internship.id}`, {
-				method: 'PUT',
-				body: JSON.stringify({ status: newStatus })
-			});
-
-			if (response.ok) {
-				currentStatus = newStatus;
-				showToast('Status atualizado com sucesso!', 'success');
-			} else {
-				showToast('Erro ao atualizar status', 'error');
-			}
-		} catch (err) {
-			console.error(err);
-			showToast('Erro de conexão ao atualizar status', 'error');
-		} finally {
-			statusUpdating = false;
-		}
-	}
-
-	async function handleSubmitForApproval() {
-		// 1. Se houver alterações não salvas, salva primeiro
-		if (formModified) {
-			await handleSave();
-			// Se o salvamento falhou, não prossegue
-			if (!saveSuccess) return;
-		}
-
-		// 2. Abre o modal customizado de confirmação
-		showApprovalModal = true;
-	}
-
-	async function confirmApproval() {
-		showApprovalModal = false;
-		await updateStatus('WAITING_APPROVAL');
-	}
-
-	function cancelApproval() {
-		showApprovalModal = false;
-	}
-
-	async function handleApproveTCE() {
-		showApproveTCEModal = true;
-	}
-
-	async function confirmApproveTCE() {
-		showApproveTCEModal = false;
-		await updateStatus('APPROVED');
-	}
-
-	function cancelApproveTCE() {
-		showApproveTCEModal = false;
-	}
-
-	let messageTip = $state('');
-
-	const statusLabels: Record<string, string> = {
-		DRAFT: 'Em Edição',
-		WAITING_APPROVAL: 'Aguardando Aprovação',
-		REVISION_REQUESTED: 'Revisão Solicitada',
-		APPROVED: 'Aprovado',
-		STARTED: 'Iniciado'
-	};
-
-	const statusColors: Record<string, string> = {
-		DRAFT: 'border-slate-200 bg-slate-100 text-slate-600',
-		WAITING_APPROVAL: 'border-amber-200 bg-amber-100 text-amber-700',
-		REVISION_REQUESTED: 'border-rose-200 bg-rose-100 text-rose-700',
-		APPROVED: 'border-indigo-200 bg-indigo-100 text-indigo-700',
-		STARTED: 'border-emerald-200 bg-emerald-100 text-emerald-700'
-	};
 </script>
 
 <svelte:head>
@@ -858,78 +769,7 @@
 					{/each}
 				</div>
 
-				<!-- TCE Status Badge & Controls (Movido para aqui) -->
-				<div class="mt-8 flex flex-wrap items-center justify-center gap-4 rounded-xl border border-slate-100 bg-slate-50/50 p-6 shadow-inner">
-					<div class="flex items-center gap-2">
-						<span class="text-xs font-black tracking-widest text-slate-400 uppercase">Status Atual do TCE:</span>
-						<span class="rounded-lg border px-3 py-1 text-xs font-black uppercase {statusColors[currentStatus]}">
-							{statusLabels[currentStatus]}
-						</span>
-					</div>
 
-					<div class="h-4 w-px bg-slate-200 hidden md:block"></div>
-
-					<div class="flex flex-wrap items-center gap-2">
-						{#if currentStatus === 'DRAFT' || currentStatus === 'REVISION_REQUESTED'}
-							<button
-								type="button"
-								onclick={handleSubmitForApproval}
-								disabled={statusUpdating || saving}
-								class="rounded-lg bg-amber-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-amber-700 active:scale-95 disabled:opacity-50"
-							>
-								{#if statusUpdating || saving}🌀{:else}📤 Concluir e Enviar para Aprovação{/if}
-							</button>
-						{/if}
-
-						{#if (['teacher', 'admin', 'sudo'].includes($user?.roles ?? '')) && currentStatus === 'WAITING_APPROVAL'}
-							<button
-								type="button"
-								onclick={handleApproveTCE}
-								disabled={statusUpdating}
-								class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-indigo-700 active:scale-95 disabled:opacity-50"
-							>
-								✅ Aprovar TCE
-							</button>
-							<!-- Botão desativado temporariamente - Implementar futuramente com fluxo de justificativa -->
-							<!-- 
-							<button
-								type="button"
-								onclick={() => updateStatus('REVISION_REQUESTED')}
-								disabled={statusUpdating}
-								class="rounded-lg bg-rose-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-rose-700 active:scale-95 disabled:opacity-50"
-							>
-								❌ Solicitar Revisão
-							</button>
-							-->
-						{/if}
-
-						{#if (['teacher', 'admin', 'sudo'].includes($user?.roles ?? '')) && currentStatus === 'APPROVED'}
-							<button
-								type="button"
-								onclick={() => updateStatus('STARTED')}
-								disabled={statusUpdating}
-								class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700 active:scale-95 disabled:opacity-50"
-							>
-								🚀 Iniciar Estágio (Assinaturas OK)
-							</button>
-						{/if}
-
-						{#if currentStatus !== 'DRAFT' && (['teacher', 'admin', 'sudo'].includes($user?.roles ?? ''))}
-							<button
-								type="button"
-								onclick={() => updateStatus('DRAFT')}
-								disabled={statusUpdating}
-								class="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-600 shadow-sm transition hover:bg-slate-50 active:scale-95 disabled:opacity-50"
-							>
-								🔄 Voltar para Edição
-							</button>
-						{/if}
-					</div>
-
-					{#if messageTip}
-						<p class="w-full text-center text-xs font-bold text-amber-600 animate-pulse mt-1" transition:fade>{messageTip}</p>
-					{/if}
-				</div>
 
 				<div class="mt-8 flex w-full flex-col items-center gap-4">
 					<div class="flex w-full max-w-2xl gap-4 flex-col sm:flex-row">
@@ -962,6 +802,7 @@
 							{/if}
 						</button>
 
+						<!-- 
 						<button
 							type="button"
                             onclick={() => handleSubmit('docx')}
@@ -975,6 +816,7 @@
 								📘 Gerar Word
 							{/if}
 						</button>
+						-->
 					</div>
 
 					{#if successLink || successLinkDocx}
@@ -993,6 +835,7 @@
                                     📥 Baixar PDF
                                 </a>
                                 {/if}
+                                <!-- 
                                 {#if successLinkDocx}
 								<a
 									href={successLinkDocx}
@@ -1002,6 +845,7 @@
                                     📥 Baixar Word
                                 </a>
                                 {/if}
+                                -->
 							</div>
 						</div>
 					{/if}
@@ -1020,29 +864,7 @@
 		</div>
 	{/if}
 
-	<!-- Modal de Confirmação de Envio -->
-	<Modal
-		show={showApprovalModal}
-		type="warning"
-		title="Confirmar Envio"
-		message="Atenção: O formulário será enviado para o professor realizar a conferência. Após o envio, você não poderá editar os dados até que o professor solicite uma revisão ou aprove o documento. Deseja enviar agora?"
-		confirmLabel="Sim, enviar agora"
-		cancelLabel="Voltar e revisar"
-		onConfirm={confirmApproval}
-		onCancel={cancelApproval}
-	/>
 
-	<!-- Modal de Confirmação de Aprovação (Professor) -->
-	<Modal
-		show={showApproveTCEModal}
-		type="success"
-		title="Aprovar TCE"
-		message="Não esqueça de orientar a empresa a: imprimir o documento em 3 VIAS, colher as assinaturas físicas de todas as partes e trazer os documentos assinados na escola."
-		confirmLabel="Sim, Aprovar e Orientar"
-		cancelLabel="Voltar"
-		onConfirm={confirmApproveTCE}
-		onCancel={cancelApproveTCE}
-	/>
 {:else}
 	<div class="flex min-h-[70vh] items-center justify-center">
 		<p class="animate-pulse text-gray-500">Carregando formulário...</p>

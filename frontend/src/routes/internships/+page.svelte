@@ -18,7 +18,6 @@
 		jsonData: any;
 		createdAt: string;
 		updatedAt: string;
-		status: 'DRAFT' | 'WAITING_APPROVAL' | 'REVISION_REQUESTED' | 'APPROVED' | 'STARTED';
 	}
 
 	interface Teacher {
@@ -36,7 +35,6 @@
 	let isDeletingId = $state<string | null>(null);
 	let teachers = $state<Teacher[]>([]); 
 	let selectedTeacher = $state(''); 
-	let selectedStatus = $state(''); 
 
 	// Filtros e Paginação (Server-side)
 	let searchTerm = $state('');
@@ -44,14 +42,7 @@
 	let pageSize = $state(25);
 	let currentPage = $state(1);
 
-	let statusCounts = $state({
-		DRAFT: 0,
-		WAITING_APPROVAL: 0,
-		REVISION_REQUESTED: 0,
-		APPROVED: 0,
-		STARTED: 0,
-		TOTAL: 0
-	});
+
 
 	async function fetchInternships() {
 		if (isLoading && internships.length > 0) return;
@@ -63,8 +54,7 @@
 				limit: String(pageSize.toString()),
 				search: searchTerm,
 				studentName: searchName,
-				teacher: selectedTeacher,
-				status: selectedStatus
+				teacher: selectedTeacher
 			});
 
 			const response = await apiFetch(`/internships?${query.toString()}`);
@@ -79,9 +69,7 @@
 					totalRecords = result.length;
 				}
 
-				// Atualizar métricas (para simplicidade, calculamos a partir do total se o backend não enviar)
-				// Em um cenário real, você poderia ter um endpoint /internships/metrics
-				updateMetrics();
+				// totalRecords = result.total;
 			} else {
 				error = 'Erro ao carregar estágios do servidor.';
 			}
@@ -92,33 +80,7 @@
 		}
 	}
 
-	async function updateMetrics() {
-		try {
-			// Usamos os mesmos filtros da busca, MAS sem o filtro de status (para ver a distribuição entre todos os status)
-			const query = new URLSearchParams({
-				limit: '2000', // Limite alto para pegar todos os registros filtrados
-				search: searchTerm,
-				studentName: searchName,
-				teacher: selectedTeacher
-			});
 
-			const res = await apiFetch(`/internships?${query.toString()}`);
-			if (res.ok) {
-				const all = await res.json();
-				const list = Array.isArray(all) ? all : (all.data || []);
-				
-				const counts = { DRAFT: 0, WAITING_APPROVAL: 0, REVISION_REQUESTED: 0, APPROVED: 0, STARTED: 0, TOTAL: list.length };
-				list.forEach((item: Internship) => {
-					if (counts[item.status as keyof typeof counts] !== undefined) {
-						(counts[item.status as keyof typeof counts] as number)++;
-					}
-				});
-				statusCounts = counts;
-			}
-		} catch {
-			console.error('Erro ao atualizar métricas');
-		}
-	}
 
 	onMount(() => {
 		let unsubscribe: () => void;
@@ -180,27 +142,7 @@
 		return new Date(dateStr).toLocaleDateString('pt-BR');
 	}
 
-	function getStatusLabel(status: string) {
-		const labels: Record<string, string> = {
-			DRAFT: 'Novos em edição',
-			WAITING_APPROVAL: 'Aguardando aprovação do professor',
-			REVISION_REQUESTED: 'Aguardando revisão da empresa',
-			APPROVED: 'Aprovado',
-			STARTED: 'Iniciado'
-		};
-		return labels[status] || status;
-	}
 
-	function getStatusBadgeClass(status: string) {
-		const classes: Record<string, string> = {
-			DRAFT: 'bg-slate-100 text-slate-600 border-slate-200',
-			WAITING_APPROVAL: 'bg-amber-100 text-amber-700 border-amber-200',
-			REVISION_REQUESTED: 'bg-rose-100 text-rose-700 border-rose-200',
-			APPROVED: 'bg-indigo-100 text-indigo-700 border-indigo-200',
-			STARTED: 'bg-emerald-100 text-emerald-700 border-emerald-200'
-		};
-		return classes[status] || 'bg-gray-100 text-gray-600 border-gray-200';
-	}
 
 	let totalPages = $derived(Math.ceil(totalRecords / pageSize));
 
@@ -324,17 +266,7 @@
 					{/each}
 				</select>
 
-				<select
-					bind:value={selectedStatus}
-					class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
-				>
-					<option value="">Status (Todos)</option>
-					<option value="DRAFT">Novos em edição</option>
-					<option value="WAITING_APPROVAL">Aguardando aprovação do professor</option>
-					<option value="REVISION_REQUESTED">Aguardando revisão da empresa</option>
-					<option value="APPROVED">Aprovado</option>
-					<option value="STARTED">Iniciado</option>
-				</select>
+
 
 				<div class="flex-grow"></div>
 
@@ -368,48 +300,7 @@
 			</div>
 		</header>
 
-		<!-- Dashboard / Métricas -->
-		<div class="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6" in:fade>
-			<div class="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm transition-all hover:shadow-md">
-				<p class="text-[10px] font-black tracking-widest text-slate-400 uppercase">Total</p>
-				<p class="text-2xl font-black text-slate-800">{statusCounts.TOTAL}</p>
-			</div>
-			<div class="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm transition-all hover:shadow-md">
-				<p class="text-[10px] font-black tracking-widest text-slate-400 uppercase">Novos em edição</p>
-				<div class="flex items-center gap-2">
-					<p class="text-2xl font-black text-slate-600">{statusCounts.DRAFT}</p>
-					<span class="h-2 w-2 rounded-full bg-slate-400"></span>
-				</div>
-			</div>
-			<div class="rounded-2xl border border-amber-100 bg-white p-4 shadow-sm transition-all hover:shadow-md">
-				<p class="text-[10px] font-black tracking-widest text-amber-500 uppercase">Aguardando aprovação PROFESSOR</p>
-				<div class="flex items-center gap-2">
-					<p class="text-2xl font-black text-amber-700">{statusCounts.WAITING_APPROVAL}</p>
-					<span class="h-2 w-2 animate-pulse rounded-full bg-amber-500"></span>
-				</div>
-			</div>
-			<div class="rounded-2xl border border-rose-100 bg-white p-4 shadow-sm transition-all hover:shadow-md">
-				<p class="text-[10px] font-black tracking-widest text-rose-500 uppercase">Aguardando revisão EMPRESA</p>
-				<div class="flex items-center gap-2">
-					<p class="text-2xl font-black text-rose-700">{statusCounts.REVISION_REQUESTED}</p>
-					<span class="h-2 w-2 rounded-full bg-rose-500"></span>
-				</div>
-			</div>
-			<div class="rounded-2xl border border-indigo-100 bg-white p-4 shadow-sm transition-all hover:shadow-md">
-				<p class="text-[10px] font-black tracking-widest text-indigo-500 uppercase">Aprovados</p>
-				<div class="flex items-center gap-2">
-					<p class="text-2xl font-black text-indigo-700">{statusCounts.APPROVED}</p>
-					<span class="h-2 w-2 rounded-full bg-indigo-500"></span>
-				</div>
-			</div>
-			<div class="rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm transition-all hover:shadow-md">
-				<p class="text-[10px] font-black tracking-widest text-emerald-500 uppercase">Iniciados</p>
-				<div class="flex items-center gap-2">
-					<p class="text-2xl font-black text-emerald-700">{statusCounts.STARTED}</p>
-					<span class="h-2 w-2 rounded-full bg-emerald-500"></span>
-				</div>
-			</div>
-		</div>
+
 
 		<!-- Main Content -->
 		<main
@@ -469,9 +360,7 @@
 								<th class="px-6 py-4 text-xs font-black tracking-wider text-slate-500 uppercase"
 									>Criado em</th
 								>
-								<th class="px-6 py-4 text-xs font-black tracking-wider text-slate-500 uppercase"
-									>Status</th
-								>
+
 								<th
 									class="px-6 py-4 text-center text-xs font-black tracking-wider text-slate-500 uppercase"
 									>Ações</th
@@ -522,15 +411,7 @@
 											minute: '2-digit'
 										})}</td
 									>
-									<td class="px-6 py-4">
-										<span
-											class="inline-flex items-center rounded-lg border px-2 py-1 text-[10px] font-black tracking-tight uppercase {getStatusBadgeClass(
-												item.status
-											)}"
-										>
-											{getStatusLabel(item.status)}
-										</span>
-									</td>
+
 									<td class="px-6 py-4 text-center">
 										<div class="flex items-center justify-center gap-2">
 											<a
@@ -586,7 +467,7 @@
 
 							{#if internships.length === 0}
 								<tr>
-									<td colspan="8" class="px-6 py-20 text-center">
+									<td colspan="7" class="px-6 py-20 text-center">
 										<div class="flex flex-col items-center space-y-2">
 											<svg
 												class="h-12 w-12 text-slate-200"
