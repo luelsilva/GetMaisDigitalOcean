@@ -5,6 +5,19 @@ Todas as mudanças notáveis para o projeto **GetMaisDigitalOcean** serão docum
 O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
 e este projeto adere ao [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-03-29
+
+### Removed
+- **Ciclo de Vida do TCE**: Removido o sistema de status (**DRAFT**, **APPROVED**, etc.) das páginas de edição e listagem para simplificar a jornada do usuário.
+- **Dashboard de Métricas**: Painel visual de contagem por status removido da tela de estágios.
+- **Filtros de Status**: Removida a possibilidade de filtrar estágios por status.
+- **Modais de Fluxo**: Removidos os modais de confirmação de envio e aprovação relacionados aos status.
+
+### Changed
+- **Interface TCE**: Ocultado botão de **Gerar Word** e link de download `.docx` temporariamente, mantendo a geração apenas via PDF para garantir a validação nativa de campos obrigatórios.
+
+---
+
 ## [1.2.1] - 2026-03-27
 
 ### Added
