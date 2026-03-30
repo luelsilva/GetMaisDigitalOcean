@@ -26,6 +26,9 @@
 	let saving = $state(false);
 	let saveSuccess = $state(false);
 	let formModified = $state(false);
+	
+	let internshipStatus = $state('DRAFT');
+	let isAuthority = $derived(['teacher', 'admin', 'sudo'].includes($user?.roles || $user?.role || ''));
 
 	let toastMessage = $state('');
 	let toastType = $state<'success' | 'error'>('success');
@@ -67,6 +70,7 @@
 
 		// Se estiver em modo de edição, preenche o formulário com os dados do estágio
 		if (pageData.mode === 'edit' && pageData.internship) {
+			internshipStatus = pageData.internship.status || 'DRAFT';
 			if (pageData.internship.jsonData) {
 				formValues = {
 					...formValues,
@@ -462,7 +466,8 @@
 				companyName: cleanVal(formValues['nome_empresa'] || formValues['NomeEmpresa'] || formValues['razao_social'] || formValues['empresa']) || pageData.internship?.companyName,
 				startDate: cleanVal(formValues['dt_inicio'] || formValues['data_inicio'] || formValues['DataInicio']),
 				endDate: cleanVal(formValues['dt_fim'] || formValues['data_final'] || formValues['DataFinal']),
-				jsonData: formValues
+				jsonData: formValues,
+				status: internshipStatus
 			};
 
 			// Converter matrícula para número se existir
@@ -678,7 +683,7 @@
 				showSavedModal = false;
 				// Se for um novo estágio, após fechar o modal (neste caso enviou email), redireciona
 				if (pageData.mode === 'new') {
-					window.location.href = `/gotce?id=${lastSavedId}`;
+					window.location.href = `/v2/gotce?id=${lastSavedId}`;
 				}
 			} else {
 				const err = await res.json();
@@ -888,6 +893,23 @@
 
 
 				<div class="mt-8 flex w-full flex-col items-center gap-4">
+					{#if isAuthority && pageData.mode === 'edit'}
+						<div class="flex w-full max-w-2xl flex-col items-center gap-3 rounded-xl border border-indigo-100 bg-indigo-50/50 p-4 shadow-sm">
+							<span class="text-xs font-black text-indigo-900 uppercase tracking-wider">Mudar Status do Termo (Uso da Instituição)</span>
+							<div class="flex w-full flex-wrap justify-center gap-2">
+								{#each ['DRAFT', 'WAITING_APPROVAL', 'REVISION_REQUESTED', 'APPROVED', 'STARTED'] as st}
+									<button
+										type="button"
+										onclick={() => { internshipStatus = st; markAsModified(); }}
+										class="rounded-lg px-3 py-1.5 text-xs font-bold transition-all {internshipStatus === st ? 'bg-indigo-600 text-white shadow-md scale-105' : 'bg-white text-indigo-600 border border-indigo-200 hover:bg-indigo-100 hover:scale-105'}"
+									>
+										{st === 'DRAFT' ? 'Rascunho' : st === 'WAITING_APPROVAL' ? 'Aguardar Aprovação' : st === 'REVISION_REQUESTED' ? 'Pedir Revisão' : st === 'APPROVED' ? 'Aprovado' : 'Estagiando'}
+									</button>
+								{/each}
+							</div>
+						</div>
+					{/if}
+
 					<div class="flex w-full max-w-2xl gap-4 flex-col sm:flex-row">
 						<button
 							type="button"

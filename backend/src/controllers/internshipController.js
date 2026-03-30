@@ -420,13 +420,27 @@ exports.notifyTeacherConference = async (req, res, next) => {
         // 1. Notificar Professor (Orientador)
         await emailService.sendTCEWaitingApprovalToTeacher(email, studentName, companyName, link);
 
+        // 3. ATUALIZAR STATUS DO ESTÁGIO (Novo Requisito: Só muda status se e-mail for enviado)
+        // Isso oficializa a submissão para o professor
+        const [updatedInternship] = await db.update(internships)
+            .set({ 
+                status: 'WAITING_APPROVAL', 
+                updatedAt: new Date(),
+                lastModifiedBy: req.user.id 
+            })
+            .where(eq(internships.id, id))
+            .returning();
+
         // 2. Notificar a Empresa / Solicitante (Comprovante de Envio)
         if (req.user && req.user.email) {
             await emailService.sendTCEWaitingApprovalToCompany(req.user.email, studentName, name, link)
                 .catch(err => console.error('[EMAIL ERROR] Falha ao notificar empresa (comprovante):', err));
         }
 
-        res.json({ message: 'E-mail enviado com sucesso ao professor e cópia para você' });
+        res.json({ 
+            message: 'E-mail enviado com sucesso ao professor e status atualizado para Aguardando Aprovação',
+            internship: updatedInternship 
+        });
     } catch (error) {
         console.error('[NOTIFY ERROR]', error);
         res.status(500).json({ error: 'Falha ao enviar e-mail' });
