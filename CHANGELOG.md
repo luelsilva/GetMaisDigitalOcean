@@ -5,6 +5,16 @@ Todas as mudanças notáveis para o projeto **GetMaisDigitalOcean** serão docum
 O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
 e este projeto adere ao [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-03-30
+
+### Added
+- **Controle Institucional de Status**: Adicionado barra de status visível em formulários apenas para `teacher`, `admin` e `sudo`, permitindo setar o status e salvar num único clique.
+
+### Changed
+- **Páginas Substituídas**: Removido `/v2` e retornado interfaces modernas de lista de estágios e visualização de TCE para suas rotas raiz (`/gotce` e `/internships`).
+
+---
+
 ## [1.3.0] - 2026-03-29
 
 ### Removed

@@ -18,6 +18,7 @@
 		jsonData: any;
 		createdAt: string;
 		updatedAt: string;
+		status: 'DRAFT' | 'WAITING_APPROVAL' | 'REVISION_REQUESTED' | 'APPROVED' | 'STARTED';
 	}
 
 	interface Teacher {
@@ -33,16 +34,15 @@
 	let totalRecords = $state(0);
 	let isDeleting = $state(false);
 	let isDeletingId = $state<string | null>(null);
-	let teachers = $state<Teacher[]>([]); 
-	let selectedTeacher = $state(''); 
+	let teachers = $state<Teacher[]>([]);
+	let selectedTeacher = $state('');
+	let selectedStatus = $state('');
 
 	// Filtros e Paginação (Server-side)
 	let searchTerm = $state('');
 	let searchName = $state('');
 	let pageSize = $state(25);
 	let currentPage = $state(1);
-
-
 
 	async function fetchInternships() {
 		if (isLoading && internships.length > 0) return;
@@ -54,7 +54,8 @@
 				limit: String(pageSize.toString()),
 				search: searchTerm,
 				studentName: searchName,
-				teacher: selectedTeacher
+				teacher: selectedTeacher,
+				status: selectedStatus
 			});
 
 			const response = await apiFetch(`/internships?${query.toString()}`);
@@ -80,8 +81,6 @@
 		}
 	}
 
-
-
 	onMount(() => {
 		let unsubscribe: () => void;
 
@@ -100,9 +99,7 @@
 				}
 			});
 
-			await Promise.all([
-				fetchTeachers()
-			]);
+			await Promise.all([fetchTeachers()]);
 		});
 
 		return () => {
@@ -141,8 +138,6 @@
 		if (!dateStr) return '-';
 		return new Date(dateStr).toLocaleDateString('pt-BR');
 	}
-
-
 
 	let totalPages = $derived(Math.ceil(totalRecords / pageSize));
 
@@ -183,8 +178,6 @@
 			isDeletingId = null;
 		}
 	}
-
-
 </script>
 
 <svelte:head>
@@ -194,9 +187,7 @@
 <div class="min-h-screen bg-slate-50 p-4 md:p-8">
 	<div class="mx-auto max-w-7xl space-y-6">
 		<!-- Header Section -->
-		<header
-			class="flex flex-col gap-4 rounded-2xl border border-slate-100 bg-white p-6 shadow-sm"
-		>
+		<header class="flex flex-col gap-4 rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
 			<div class="flex flex-col justify-between gap-4 md:flex-row md:items-center">
 				<div>
 					<h1 class="text-2xl font-black tracking-tight text-slate-800">
@@ -249,7 +240,12 @@
 						viewBox="0 0 24 24"
 						stroke="currentColor"
 					>
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+						/>
 					</svg>
 				</div>
 			</div>
@@ -258,6 +254,7 @@
 			<div class="flex flex-wrap items-center gap-3">
 				<select
 					bind:value={selectedTeacher}
+					onchange={triggerSearch}
 					class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500 md:w-64"
 				>
 					<option value="">Professor (Todos)</option>
@@ -266,7 +263,18 @@
 					{/each}
 				</select>
 
-
+				<select
+					bind:value={selectedStatus}
+					onchange={triggerSearch}
+					class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500 md:w-48"
+				>
+					<option value="">Status (Todos)</option>
+					<option value="DRAFT">Rascunho</option>
+					<option value="WAITING_APPROVAL">Aguardando Aprovação</option>
+					<option value="REVISION_REQUESTED">Revisão Solicitada</option>
+					<option value="APPROVED">Aprovado</option>
+					<option value="STARTED">Iniciado</option>
+				</select>
 
 				<div class="flex-grow"></div>
 
@@ -276,10 +284,17 @@
 					disabled={isLoading}
 				>
 					{#if isLoading}
-						<div class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+						<div
+							class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"
+						></div>
 					{:else}
 						<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2.5"
+								d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+							/>
 						</svg>
 					{/if}
 					Pesquisar
@@ -299,8 +314,6 @@
 				</select>
 			</div>
 		</header>
-
-
 
 		<!-- Main Content -->
 		<main
@@ -360,6 +373,9 @@
 								<th class="px-6 py-4 text-xs font-black tracking-wider text-slate-500 uppercase"
 									>Criado em</th
 								>
+								<th class="px-6 py-4 text-xs font-black tracking-wider text-slate-500 uppercase"
+									>Status</th
+								>
 
 								<th
 									class="px-6 py-4 text-center text-xs font-black tracking-wider text-slate-500 uppercase"
@@ -411,6 +427,46 @@
 											minute: '2-digit'
 										})}</td
 									>
+
+									<td class="px-6 py-4">
+										{#if item.status === 'DRAFT'}
+											<span
+												class="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-2.5 py-0.5 text-[10px] font-black tracking-tight text-slate-600 uppercase"
+											>
+												Editando
+											</span>
+										{:else if item.status === 'WAITING_APPROVAL'}
+											<span
+												class="inline-flex items-center rounded-full border border-amber-200 bg-amber-100 px-2.5 py-0.5 text-[10px] font-black tracking-tight text-amber-700 uppercase"
+											>
+												Aguardando
+											</span>
+										{:else if item.status === 'REVISION_REQUESTED'}
+											<span
+												class="inline-flex items-center rounded-full border border-rose-200 bg-rose-100 px-2.5 py-0.5 text-[10px] font-black tracking-tight text-rose-700 uppercase"
+											>
+												Revisão
+											</span>
+										{:else if item.status === 'APPROVED'}
+											<span
+												class="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-100 px-2.5 py-0.5 text-[10px] font-black tracking-tight text-emerald-700 uppercase"
+											>
+												Aprovado
+											</span>
+										{:else if item.status === 'STARTED'}
+											<span
+												class="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-100 px-2.5 py-0.5 text-[10px] font-black tracking-tight text-indigo-700 uppercase"
+											>
+												Estagiando
+											</span>
+										{:else}
+											<span
+												class="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-2.5 py-0.5 text-[10px] font-black tracking-tight text-slate-600 uppercase"
+											>
+												{item.status}
+											</span>
+										{/if}
+									</td>
 
 									<td class="px-6 py-4 text-center">
 										<div class="flex items-center justify-center gap-2">
@@ -467,7 +523,7 @@
 
 							{#if internships.length === 0}
 								<tr>
-									<td colspan="7" class="px-6 py-20 text-center">
+									<td colspan="9" class="px-6 py-20 text-center">
 										<div class="flex flex-col items-center space-y-2">
 											<svg
 												class="h-12 w-12 text-slate-200"
@@ -547,8 +603,6 @@
 		</main>
 	</div>
 </div>
-
-
 
 <style>
 	/* Estilos Premium */

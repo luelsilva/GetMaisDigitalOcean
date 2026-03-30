@@ -1,8 +1,10 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { apiFetch } from '$lib/api';
+	import { user } from '$lib/stores/auth';
 	import { fade } from 'svelte/transition';
 	import { devNotes } from '$lib/stores/devNotes.svelte';
+	import Modal from '$lib/components/Modal.svelte';
 
 	interface Props {
 		data: {
@@ -24,9 +26,17 @@
 	let saving = $state(false);
 	let saveSuccess = $state(false);
 	let formModified = $state(false);
+	
+	let internshipStatus = $state('DRAFT');
+	let isAuthority = $derived(['teacher', 'admin', 'sudo'].includes($user?.roles || $user?.role || ''));
 
 	let toastMessage = $state('');
 	let toastType = $state<'success' | 'error'>('success');
+
+	let showSavedModal = $state(false);
+	let sendingEmail = $state(false);
+	let lastSavedId = $state('');
+
 
 	function showToast(message: string, type: 'success' | 'error' = 'success') {
 		toastMessage = message;
@@ -56,8 +66,11 @@
 		formValues['copyright'] = `© ${new Date().getFullYear()} LCO Systems`;
 		formValues['data_atual'] = new Date().toLocaleDateString('pt-BR');
 
+		console.log('🔰 [PAGE MOUNT]: User store state:', $user);
+
 		// Se estiver em modo de edição, preenche o formulário com os dados do estágio
 		if (pageData.mode === 'edit' && pageData.internship) {
+			internshipStatus = pageData.internship.status || 'DRAFT';
 			if (pageData.internship.jsonData) {
 				formValues = {
 					...formValues,
@@ -453,7 +466,8 @@
 				companyName: cleanVal(formValues['nome_empresa'] || formValues['NomeEmpresa'] || formValues['razao_social'] || formValues['empresa']) || pageData.internship?.companyName,
 				startDate: cleanVal(formValues['dt_inicio'] || formValues['data_inicio'] || formValues['DataInicio']),
 				endDate: cleanVal(formValues['dt_fim'] || formValues['data_final'] || formValues['DataFinal']),
-				jsonData: formValues
+				jsonData: formValues,
+				status: internshipStatus
 			};
 
 			// Converter matrícula para número se existir
@@ -486,9 +500,25 @@
 						: 'Estágio salvo com sucesso!',
 					'success'
 				);
-				if (pageData.mode === 'new') {
+				
+				lastSavedId = savedData.id;
+
+				console.log('🔍 [DEBUG ROLE CHECK]:', { 
+					user: $user, 
+					rolePlural: $user?.roles, 
+					roleSingular: $user?.role || $user?.roles 
+				});
+
+				// Se for empresa, abre o modal de recomendação de envio de e-mail ao professor
+				const userRole = ($user?.roles || $user?.role || '').toString().toLowerCase();
+				if (userRole === 'company') {
+					console.log('✨ [MODAL TRIGGERED]');
+					showSavedModal = true;
+				} else if (pageData.mode === 'new') {
+					console.log('⏭ [NO MODAL - REDIRECTING]');
 					window.location.href = `/gotce?id=${savedData.id}`;
 				}
+
 			} else {
 				const err = await response.json();
 				showToast('Erro ao salvar: ' + (err.error || 'Erro desconhecido'), 'error');
@@ -629,8 +659,99 @@
 		}
 	}
 
+	async function handleNotifyProfessor() {
+		const professorName = formValues['nome_professor'] || formValues['NomeProfessor'];
+		const professorEmail = formValues['email_professor'] || formValues['EmailProfessor'];
+
+		if (!professorEmail) {
+			showToast('E-mail do professor não encontrado no formulário', 'error');
+			return;
+		}
+
+		sendingEmail = true;
+		try {
+			const res = await apiFetch(`/internships/${lastSavedId || pageData.internship?.id}/notificar-professor`, {
+				method: 'POST',
+				body: JSON.stringify({
+					teacherName: professorName,
+					teacherEmail: professorEmail
+				})
+			});
+
+			if (res.ok) {
+				showToast('E-mail enviado ao professor com sucesso!');
+				showSavedModal = false;
+				// Se for um novo estágio, após fechar o modal (neste caso enviou email), redireciona
+				if (pageData.mode === 'new') {
+					window.location.href = `/gotce?id=${lastSavedId}`;
+				}
+			} else {
+				const err = await res.json();
+				showToast('Erro ao notificar professor: ' + (err.error || 'Erro desconhecido'), 'error');
+			}
+		} catch (err) {
+			console.error(err);
+			showToast('Erro de conexão ao enviar e-mail', 'error');
+		} finally {
+			sendingEmail = false;
+		}
+	}
+
+	function handleCloseModal() {
+		showSavedModal = false;
+		// Se for um novo estágio, ao fechar (mesmo sem enviar), redireciona para a edição para carregar o ID correto na URL
+		if (pageData.mode === 'new' && lastSavedId) {
+			window.location.href = `/gotce?id=${lastSavedId}`;
+		}
+	}
+
 
 </script>
+
+<Modal bind:show={showSavedModal}>
+	<div class="p-6">
+		<div class="mb-6 flex flex-col items-center text-center">
+			<div class="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-3xl">
+				✅
+			</div>
+			<h3 class="text-xl font-black text-slate-800">Termo Salvo com Sucesso!</h3>
+			<p class="mt-2 text-slate-600">
+				Deseja enviar um e-mail agora para o professor orientador solicitando a conferência do documento?
+			</p>
+		</div>
+
+		<div class="mb-6 rounded-xl bg-slate-50 p-4 border border-slate-200">
+			<div class="flex flex-col gap-1">
+				<span class="text-[10px] font-black uppercase tracking-wider text-slate-400">Professor Responsável</span>
+				<span class="font-bold text-slate-700">{formValues['nome_professor'] || formValues['NomeProfessor'] || 'Não informado'}</span>
+				<span class="text-sm text-indigo-600">{formValues['email_professor'] || formValues['EmailProfessor'] || 'E-mail não informado'}</span>
+			</div>
+		</div>
+
+		<div class="flex flex-col gap-3">
+			<button
+				onclick={handleNotifyProfessor}
+				disabled={sendingEmail}
+				class="btn-action w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50"
+			>
+				{#if sendingEmail}
+					<span class="mr-2 animate-spin">🌀</span> Enviando...
+				{:else}
+					📧 Enviar e-mail ao professor para conferência
+				{/if}
+			</button>
+
+			<button
+				onclick={handleCloseModal}
+				disabled={sendingEmail}
+				class="btn-action w-full border-2 border-slate-200 bg-transparent! text-slate-600! hover:bg-slate-50 disabled:opacity-50"
+			>
+				❌ Não enviar, prefiro eu mesmo mandar o e-mail
+			</button>
+		</div>
+	</div>
+</Modal>
+
 
 <svelte:head>
 	<title>{form?.titulo || 'Carregando...'} | Cedup</title>
@@ -772,6 +893,23 @@
 
 
 				<div class="mt-8 flex w-full flex-col items-center gap-4">
+					{#if isAuthority && pageData.mode === 'edit'}
+						<div class="flex w-full max-w-2xl flex-col items-center gap-3 rounded-xl border border-indigo-100 bg-indigo-50/50 p-4 shadow-sm">
+							<span class="text-xs font-black text-indigo-900 uppercase tracking-wider">Mudar Status do Termo (Uso da Instituição)</span>
+							<div class="flex w-full flex-wrap justify-center gap-2">
+								{#each ['DRAFT', 'WAITING_APPROVAL', 'REVISION_REQUESTED', 'APPROVED', 'STARTED'] as st}
+									<button
+										type="button"
+										onclick={() => { internshipStatus = st; markAsModified(); }}
+										class="rounded-lg px-3 py-1.5 text-xs font-bold transition-all {internshipStatus === st ? 'bg-indigo-600 text-white shadow-md scale-105' : 'bg-white text-indigo-600 border border-indigo-200 hover:bg-indigo-100 hover:scale-105'}"
+									>
+										{st === 'DRAFT' ? 'Rascunho' : st === 'WAITING_APPROVAL' ? 'Aguardar Aprovação' : st === 'REVISION_REQUESTED' ? 'Pedir Revisão' : st === 'APPROVED' ? 'Aprovado' : 'Estagiando'}
+									</button>
+								{/each}
+							</div>
+						</div>
+					{/if}
+
 					<div class="flex w-full max-w-2xl gap-4 flex-col sm:flex-row">
 						<button
 							type="button"
