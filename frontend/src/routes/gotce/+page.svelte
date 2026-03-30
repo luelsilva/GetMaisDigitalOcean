@@ -30,6 +30,10 @@
 	let internshipStatus = $state('DRAFT');
 	let isAuthority = $derived(['teacher', 'admin', 'sudo'].includes($user?.roles || $user?.role || ''));
 
+	// Status confirmation variables
+	let showStatusModal = $state(false);
+	let pendingStatus = $state('');
+
 	let toastMessage = $state('');
 	let toastType = $state<'success' | 'error'>('success');
 
@@ -705,6 +709,37 @@
 		}
 	}
 
+	async function confirmStatusChange() {
+		const previousStatus = internshipStatus;
+		internshipStatus = pendingStatus;
+		showStatusModal = false;
+
+		if (pageData.mode === 'edit' && pageData.internship?.id) {
+			try {
+				// Envia apenas o status, mantendo os outros dados no banco intactos (PATCH/PUT parcial)
+				const response = await apiFetch(`/internships/${pageData.internship.id}`, {
+					method: 'PUT',
+					body: JSON.stringify({ status: pendingStatus })
+				});
+
+				if (response.ok) {
+					showToast('Status aplicado imediatamente com sucesso!');
+					pageData.internship.status = pendingStatus;
+				} else {
+					const err = await response.json();
+					showToast('Erro ao aplicar status: ' + (err.error || 'Erro desconhecido'), 'error');
+					internshipStatus = previousStatus; // Reverte se falhou
+				}
+			} catch (err) {
+				console.error(err);
+				showToast('Erro de conexão ao alterar status', 'error');
+				internshipStatus = previousStatus;
+			}
+		} else {
+			// Se o termo nem sequer foi criado no banco ainda, ele só vai segurar a alteração
+			markAsModified();
+		}
+	}
 
 </script>
 
@@ -747,6 +782,62 @@
 				class="btn-action w-full border-2 border-slate-200 bg-transparent! text-slate-600! hover:bg-slate-50 disabled:opacity-50"
 			>
 				❌ Não enviar, prefiro eu mesmo mandar o e-mail
+			</button>
+		</div>
+	</div>
+</Modal>
+
+<Modal bind:show={showStatusModal}>
+	<div class="p-6">
+		<div class="mb-4 text-center">
+			<div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 text-3xl">
+				⚠️
+			</div>
+			<h3 class="text-xl font-black text-slate-800">Confirmar Alteração de Status</h3>
+			<p class="mt-2 text-slate-600">
+				Você confirma a alteração do status para<br>
+				<strong class="text-indigo-600">
+					{pendingStatus === 'DRAFT' ? 'Elaborando' : 
+					 pendingStatus === 'WAITING_APPROVAL' ? 'Aguardando Aprovação' : 
+					 pendingStatus === 'REVISION_REQUESTED' ? 'Solicitar Revisão' : 
+					 pendingStatus === 'APPROVED' ? 'Aprovado' : 
+					 pendingStatus === 'STARTED' ? 'Estagiando' : pendingStatus}
+				</strong>?<br>
+			</p>
+			
+			{#if pendingStatus === 'REVISION_REQUESTED'}
+				<div class="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-left shadow-sm">
+					<p class="text-sm font-bold text-rose-800">
+						🛑 Atenção!
+					</p>
+					<p class="mt-1 text-xs text-rose-700">
+						Caso confirme, não esqueça de informar a empresa para fazer as correções necessárias.
+					</p>
+				</div>
+			{:else if pendingStatus === 'APPROVED'}
+				<div class="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-left shadow-sm">
+					<p class="text-sm font-bold text-emerald-800">
+						✅ Quase lá!
+					</p>
+					<p class="mt-1 text-xs text-emerald-700">
+						Caso confirme, não esqueça de avisar a empresa para imprimir em 3 vias e colher as assinaturas.
+					</p>
+				</div>
+			{/if}
+		</div>
+
+		<div class="mt-6 flex gap-3">
+			<button
+				onclick={() => { showStatusModal = false; pendingStatus = ''; }}
+				class="btn-action flex-1 border-2 border-slate-200 bg-transparent! text-slate-600! hover:bg-slate-50 focus:ring-0"
+			>
+				Cancelar
+			</button>
+			<button
+				onclick={confirmStatusChange}
+				class="btn-action flex-1 bg-amber-500 hover:bg-amber-600"
+			>
+				Confirmar
 			</button>
 		</div>
 	</div>
@@ -900,10 +991,11 @@
 								{#each ['DRAFT', 'WAITING_APPROVAL', 'REVISION_REQUESTED', 'APPROVED', 'STARTED'] as st}
 									<button
 										type="button"
-										onclick={() => { internshipStatus = st; markAsModified(); }}
-										class="rounded-lg px-3 py-1.5 text-xs font-bold transition-all {internshipStatus === st ? 'bg-indigo-600 text-white shadow-md scale-105' : 'bg-white text-indigo-600 border border-indigo-200 hover:bg-indigo-100 hover:scale-105'}"
+										disabled={internshipStatus === st}
+										onclick={() => { pendingStatus = st; showStatusModal = true; }}
+										class="rounded-lg px-3 py-1.5 text-xs font-bold transition-all {internshipStatus === st ? 'bg-indigo-600 text-white shadow-md scale-105 cursor-default opacity-90' : 'bg-white text-indigo-600 border border-indigo-200 hover:bg-indigo-100 hover:scale-105'}"
 									>
-										{st === 'DRAFT' ? 'Rascunho' : st === 'WAITING_APPROVAL' ? 'Aguardar Aprovação' : st === 'REVISION_REQUESTED' ? 'Pedir Revisão' : st === 'APPROVED' ? 'Aprovado' : 'Estagiando'}
+										{st === 'DRAFT' ? 'Elaborando' : st === 'WAITING_APPROVAL' ? 'Aguardando Aprovação' : st === 'REVISION_REQUESTED' ? 'Solicitar Revisão' : st === 'APPROVED' ? 'Aprovar' : 'Estagiando'}
 									</button>
 								{/each}
 							</div>

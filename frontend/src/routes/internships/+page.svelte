@@ -269,11 +269,11 @@
 					class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500 md:w-48"
 				>
 					<option value="">Status (Todos)</option>
-					<option value="DRAFT">Rascunho</option>
+					<option value="DRAFT">Elaborando</option>
 					<option value="WAITING_APPROVAL">Aguardando Aprovação</option>
 					<option value="REVISION_REQUESTED">Revisão Solicitada</option>
 					<option value="APPROVED">Aprovado</option>
-					<option value="STARTED">Iniciado</option>
+					<option value="STARTED">Estagiando</option>
 				</select>
 
 				<div class="flex-grow"></div>
@@ -433,19 +433,19 @@
 											<span
 												class="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-2.5 py-0.5 text-[10px] font-black tracking-tight text-slate-600 uppercase"
 											>
-												Editando
+												Elaborando
 											</span>
 										{:else if item.status === 'WAITING_APPROVAL'}
 											<span
 												class="inline-flex items-center rounded-full border border-amber-200 bg-amber-100 px-2.5 py-0.5 text-[10px] font-black tracking-tight text-amber-700 uppercase"
 											>
-												Aguardando
+												Aguardando Aprovação
 											</span>
 										{:else if item.status === 'REVISION_REQUESTED'}
 											<span
 												class="inline-flex items-center rounded-full border border-rose-200 bg-rose-100 px-2.5 py-0.5 text-[10px] font-black tracking-tight text-rose-700 uppercase"
 											>
-												Revisão
+												Em Revisão
 											</span>
 										{:else if item.status === 'APPROVED'}
 											<span
