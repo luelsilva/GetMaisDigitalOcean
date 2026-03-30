@@ -11,6 +11,7 @@ router.get('/:id', internshipController.getInternshipById);
 router.post('/', internshipController.createInternship);
 router.put('/:id', internshipController.updateInternship);
 router.delete('/:id', internshipController.deleteInternship);
+router.post('/:id/notificar-professor', internshipController.notifyTeacherConference);
 
 
 

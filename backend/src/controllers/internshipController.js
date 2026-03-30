@@ -385,10 +385,53 @@ exports.deleteInternship = async (req, res, next) => {
             return res.status(404).json({ error: 'Estágio não encontrado ou já deletado' });
         }
 
-        res.status(204).send();
+		res.status(204).send();
+	} catch (error) {
+		next(error);
+	}
+};
+
+// Notificar Professor para Conferência (Manual)
+exports.notifyTeacherConference = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const { teacherName, teacherEmail } = req.body;
+
+        const [internship] = await db.select()
+            .from(internships)
+            .where(eq(internships.id, id));
+
+        if (!internship) {
+            return res.status(404).json({ error: 'Estágio não encontrado' });
+        }
+
+        const studentName = internship.studentName;
+        const companyName = internship.companyName;
+        const name = teacherName || internship.jsonData?.nome_professor || internship.jsonData?.NomeProfessor;
+        const email = teacherEmail || internship.jsonData?.email_professor || internship.jsonData?.EmailProfessor;
+
+        if (!email || !email.includes('@')) {
+            return res.status(400).json({ error: 'E-mail do professor não encontrado ou inválido' });
+        }
+
+        const baseUrl = config.corsOrigin[0] || 'http://localhost:5173';
+        const link = `${baseUrl}/gotce?id=${id}`;
+
+        // 1. Notificar Professor (Orientador)
+        await emailService.sendTCEWaitingApprovalToTeacher(email, studentName, companyName, link);
+
+        // 2. Notificar a Empresa / Solicitante (Comprovante de Envio)
+        if (req.user && req.user.email) {
+            await emailService.sendTCEWaitingApprovalToCompany(req.user.email, studentName, name, link)
+                .catch(err => console.error('[EMAIL ERROR] Falha ao notificar empresa (comprovante):', err));
+        }
+
+        res.json({ message: 'E-mail enviado com sucesso ao professor e cópia para você' });
     } catch (error) {
-        next(error);
+        console.error('[NOTIFY ERROR]', error);
+        res.status(500).json({ error: 'Falha ao enviar e-mail' });
     }
 };
+
 
 
