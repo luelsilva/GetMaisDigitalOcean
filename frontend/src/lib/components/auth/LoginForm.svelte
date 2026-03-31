@@ -44,7 +44,13 @@
 						}
 					}
 
-					goto('/');
+					const savedReturnTo = localStorage.getItem('returnTo');
+					if (savedReturnTo) {
+						localStorage.removeItem('returnTo');
+						goto(savedReturnTo);
+					} else {
+						goto('/');
+					}
 				} else {
 					error = 'Tokens não recebidos da API.';
 				}

@@ -2,13 +2,7 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 
-	onMount(() => {
-		const returnTo = localStorage.getItem('returnTo');
-		if (returnTo) {
-			localStorage.removeItem('returnTo');
-			goto(returnTo);
-		}
-	});
+
 </script>
 
 <!-- Hero Section with Image -->
