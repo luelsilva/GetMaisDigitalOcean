@@ -216,7 +216,7 @@
 								href="/gotce?id={item.id}"
 								class="flex-1 rounded-xl bg-slate-50 py-2.5 text-center text-sm font-bold text-slate-700 transition hover:bg-blue-50 hover:text-blue-700"
 							>
-								Ver Contrato
+								Ver TCE
 							</a>
 							<button
 								class="rounded-xl bg-slate-50 p-2.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
