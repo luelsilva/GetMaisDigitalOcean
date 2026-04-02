@@ -797,7 +797,7 @@
 			<p class="mt-2 text-slate-600">
 				Você confirma a alteração do status para<br>
 				<strong class="text-indigo-600">
-					{pendingStatus === 'DRAFT' ? 'Elaborando' : 
+					{pendingStatus === 'DRAFT' ? 'Editando' : 
 					 pendingStatus === 'WAITING_APPROVAL' ? 'Aguardando Aprovação' : 
 					 pendingStatus === 'REVISION_REQUESTED' ? 'Solicitar Revisão' : 
 					 pendingStatus === 'APPROVED' ? 'Aprovado' : 
@@ -995,7 +995,7 @@
 										onclick={() => { pendingStatus = st; showStatusModal = true; }}
 										class="rounded-lg px-3 py-1.5 text-xs font-bold transition-all {internshipStatus === st ? 'bg-indigo-600 text-white shadow-md scale-105 cursor-default opacity-90' : 'bg-white text-indigo-600 border border-indigo-200 hover:bg-indigo-100 hover:scale-105'}"
 									>
-										{st === 'DRAFT' ? 'Elaborando' : st === 'WAITING_APPROVAL' ? 'Aguardando Aprovação' : st === 'REVISION_REQUESTED' ? 'Solicitar Revisão' : st === 'APPROVED' ? 'Aprovar' : 'Estagiando'}
+										{st === 'DRAFT' ? 'Editando' : st === 'WAITING_APPROVAL' ? 'Aguardando Aprovação' : st === 'REVISION_REQUESTED' ? 'Solicitar Revisão' : st === 'APPROVED' ? 'Aprovar' : 'Estagiando'}
 									</button>
 								{/each}
 							</div>

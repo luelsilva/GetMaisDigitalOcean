@@ -16,6 +16,7 @@
 		jsonData: any;
 		createdAt: string;
 		userId: string;
+		status: string;
 	}
 
 	let internships: Internship[] = [];
@@ -161,79 +162,85 @@
 				</a>
 			</div>
 		{:else}
-			<!-- Grid de Cards Estilo Moderno -->
-			<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-				{#each internships as item, i}
-					<div
-						in:fly={{ y: 20, duration: 400, delay: i * 50 }}
-						class="group relative flex flex-col justify-between overflow-hidden rounded-3xl border border-slate-100 bg-white p-6 shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl"
-					>
-						<div class="space-y-4">
-							<div class="flex items-start justify-between">
-								<div
-									class="rounded-2xl bg-blue-50 px-3 py-1 text-[10px] font-black tracking-wider text-blue-600 uppercase"
+			<div class="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-xl">
+				<div class="overflow-x-auto">
+					<table class="w-full border-collapse text-left">
+						<thead>
+							<tr class="border-b border-slate-100 bg-slate-50">
+								<th class="px-6 py-4 text-xs font-black tracking-wider text-slate-500 uppercase">Matrícula</th>
+								<th class="px-6 py-4 text-xs font-black tracking-wider text-slate-500 uppercase">Nome Aluno</th>
+								<th class="px-6 py-4 text-xs font-black tracking-wider text-slate-500 uppercase">Curso</th>
+								<th class="px-6 py-4 text-xs font-black tracking-wider text-slate-500 uppercase">Início</th>
+								<th class="px-6 py-4 text-xs font-black tracking-wider text-slate-500 uppercase">Final</th>
+								<th class="px-6 py-4 text-xs font-black tracking-wider text-slate-500 uppercase">Status</th>
+								<th class="px-6 py-4 text-center text-xs font-black tracking-wider text-slate-500 uppercase">Ações</th>
+							</tr>
+						</thead>
+						<tbody class="divide-y divide-slate-50">
+							{#each internships as item, i (item.id)}
+								<tr
+									in:fly={{ x: -10, duration: 300, delay: i * 20 }}
+									class="group transition-colors hover:bg-indigo-50/30"
 								>
-									{item.courseSigla}
-								</div>
-								{#if $user && $user.roles === 'company' && item.userId !== $user.id}
-									<span
-										class="rounded-full bg-indigo-50 px-2.5 py-0.5 text-[10px] font-black tracking-wider text-indigo-500 uppercase"
-									>
-										Recebido
-									</span>
-								{/if}
-							</div>
-
-							<div>
-								<h3
-									class="text-lg font-black text-slate-800 transition-colors group-hover:text-blue-600"
-								>
-									{item.studentName}
-								</h3>
-								<p class="font-mono text-xs text-slate-400">MAT: {item.studentRegistration}</p>
-							</div>
-
-							<div class="flex items-center gap-2 text-sm text-slate-600">
-								<svg
-									class="h-4 w-4 text-slate-300"
-									fill="none"
-									viewBox="0 0 24 24"
-									stroke="currentColor"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 01-2-2V7a2 2 0 012-2H5a2 2 0 01-2 2v12a2 2 0 012 2z"
-									/>
-								</svg>
-								<span>{formatDate(item.startDate)} — {formatDate(item.endDate)}</span>
-							</div>
-						</div>
-
-						<div class="mt-6 flex items-center gap-3">
-							<a
-								href="/gotce?id={item.id}"
-								class="flex-1 rounded-xl bg-slate-50 py-2.5 text-center text-sm font-bold text-slate-700 transition hover:bg-blue-50 hover:text-blue-700"
-							>
-								Ver TCE
-							</a>
-							<button
-								class="rounded-xl bg-slate-50 p-2.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
-								title="Opções"
-							>
-								<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
-									/>
-								</svg>
-							</button>
-						</div>
-					</div>
-				{/each}
+									<td class="px-6 py-4 font-mono text-sm text-slate-600">{item.studentRegistration || '-'}</td>
+									<td class="px-6 py-4">
+										<div class="flex items-center gap-2">
+											<div class="text-sm font-bold text-slate-800">{item.studentName}</div>
+										</div>
+									</td>
+									<td class="px-6 py-4">
+										<span class="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-black text-indigo-700 transition-colors group-hover:bg-indigo-200">
+											{item.courseSigla}
+										</span>
+									</td>
+									<td class="px-6 py-4 text-sm whitespace-nowrap text-slate-500">{formatDate(item.startDate)}</td>
+									<td class="px-6 py-4 text-sm whitespace-nowrap text-slate-500">{formatDate(item.endDate)}</td>
+									<td class="px-6 py-4">
+										{#if item.status === 'DRAFT'}
+											<span class="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-2.5 py-0.5 text-[10px] font-black tracking-tight text-slate-600 uppercase">
+												Editando
+											</span>
+										{:else if item.status === 'WAITING_APPROVAL'}
+											<span class="inline-flex items-center rounded-full border border-amber-200 bg-amber-100 px-2.5 py-0.5 text-[10px] font-black tracking-tight text-amber-700 uppercase">
+												Aguardando
+											</span>
+										{:else if item.status === 'REVISION_REQUESTED'}
+											<span class="inline-flex items-center rounded-full border border-rose-200 bg-rose-100 px-2.5 py-0.5 text-[10px] font-black tracking-tight text-rose-700 uppercase">
+												Em Revisão
+											</span>
+										{:else if item.status === 'APPROVED'}
+											<span class="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-100 px-2.5 py-0.5 text-[10px] font-black tracking-tight text-emerald-700 uppercase">
+												Aprovado
+											</span>
+										{:else if item.status === 'STARTED'}
+											<span class="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-100 px-2.5 py-0.5 text-[10px] font-black tracking-tight text-indigo-700 uppercase">
+												Estagiando
+											</span>
+										{:else}
+											<span class="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-2.5 py-0.5 text-[10px] font-black tracking-tight text-slate-600 uppercase">
+												{item.status || 'DRAFT'}
+											</span>
+										{/if}
+									</td>
+									<td class="px-6 py-4 text-center">
+										<div class="flex items-center justify-center gap-2">
+											<a
+												href="/gotce?id={item.id}"
+												class="group/btn rounded-lg p-2 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600"
+												title="Acessar TCE"
+											>
+												<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+													<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+													<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+												</svg>
+											</a>
+										</div>
+									</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
 			</div>
 		{/if}
 	</div>
@@ -242,5 +249,13 @@
 <style>
 	:global(body) {
 		background-color: #f8fafc;
+	}
+
+	table tr {
+		transition: transform 0.2s;
+	}
+
+	table tr:hover {
+		transform: scale(1.002);
 	}
 </style>
