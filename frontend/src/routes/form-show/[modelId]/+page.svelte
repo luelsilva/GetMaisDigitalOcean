@@ -503,7 +503,7 @@
 								{/if}
 							</button>
 
-							<button
+							<!-- <button
 								type="button"
                                 onclick={() => handleSubmit('docx')}
 								disabled={submitting}
@@ -515,7 +515,7 @@
 								{:else}
 									📘 Gerar Word
 								{/if}
-							</button>
+							</button> -->
 						</div>
 					{/if}
 
@@ -535,7 +535,7 @@
 									📥 Baixar PDF
 								</a>
                                 {/if}
-                                {#if successLinkDocx}
+                                <!-- {#if successLinkDocx}
 								<a
 									href={successLinkDocx}
 									download={`${pageData.modelId} - ${lastGeneratedName}.docx`}
@@ -543,7 +543,7 @@
 								>
 									📥 Baixar Word
 								</a>
-                                {/if}
+                                {/if} -->
 							</div>
 						</div>
 					{/if}
