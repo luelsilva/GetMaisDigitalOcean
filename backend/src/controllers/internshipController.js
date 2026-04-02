@@ -68,11 +68,14 @@ exports.getAllInternships = async (req, res, next) => {
             );
         }
 
-        // Se for company, filtrar apenas os registros que ele é DONO
+        // Se for company, filtrar apenas os registros vinculados (como dono ou campo companyId)
         if (req.user.roles === 'company') {
             whereClause = and(
                 whereClause,
-                eq(internships.userId, req.user.id)
+                or(
+                    eq(internships.userId, req.user.id),
+                    eq(internships.companyId, req.user.id)
+                )
             );
         }
 
@@ -378,9 +381,14 @@ exports.deleteInternship = async (req, res, next) => {
         const { id } = req.params;
         const whereConditions = [eq(internships.id, id), isNull(internships.deletedAt)];
 
-        // Se for company, só pode deletar o dele
+        // Se for company, só pode deletar se for vinculado a ele
         if (req.user.roles === 'company') {
-            whereConditions.push(eq(internships.userId, req.user.id));
+            whereConditions.push(
+                or(
+                    eq(internships.userId, req.user.id),
+                    eq(internships.companyId, req.user.id)
+                )
+            );
         }
 
         const [deletedInternship] = await db.update(internships)
