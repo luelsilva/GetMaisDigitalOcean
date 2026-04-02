@@ -12,6 +12,7 @@ exports.getAllInternships = async (req, res, next) => {
         const queryFields = {
             id: internships.id,
             userId: internships.userId,
+            companyId: internships.companyId,
             studentRegistration: internships.studentRegistration,
             studentName: internships.studentName,
             courseSigla: internships.courseSigla,
@@ -125,6 +126,7 @@ exports.getInternshipById = async (req, res, next) => {
         const queryFields = {
             id: internships.id,
             userId: internships.userId,
+            companyId: internships.companyId,
             studentRegistration: internships.studentRegistration,
             studentName: internships.studentName,
             courseSigla: internships.courseSigla,
@@ -171,6 +173,7 @@ exports.createInternship = async (req, res, next) => {
 
         const [newInternship] = await db.insert(internships).values({
             userId: req.user.id,
+            companyId: req.user.roles === 'company' ? req.user.id : null,
             studentRegistration: studentRegistration || null,
             studentName: studentName?.trim(),
             courseSigla: courseSigla?.trim(),
@@ -302,6 +305,10 @@ exports.updateInternship = async (req, res, next) => {
             }
         }
         
+        if (req.user.roles === 'company') {
+            updateSet.companyId = req.user.id;
+        }
+
         updateSet.updatedAt = new Date();
         updateSet.lastModifiedBy = req.user.id;
 

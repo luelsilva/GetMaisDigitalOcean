@@ -118,6 +118,7 @@ const internships = pgTable('internships', {
     studentRegistration: bigint('student_registration', { mode: 'number' }),
     studentName: text('student_name').notNull(),
     courseSigla: text('course_sigla').notNull(),
+    companyId: uuid('company_id').references(() => profiles.id, { onDelete: 'set null' }),
     companyName: text('company_name'),
     startDate: date('start_date'),
     endDate: date('end_date'),

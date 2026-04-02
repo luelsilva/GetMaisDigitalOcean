@@ -311,6 +311,7 @@ CREATE TABLE IF NOT EXISTS "internships" (
     "student_registration" bigint,
     "student_name" text NOT NULL,
     "course_sigla" text NOT NULL,
+    "company_id" UUID REFERENCES profiles(id) ON DELETE SET NULL,
     "company_name" text NULL,
     "start_date" date NULL,
     "end_date" date NULL,
@@ -352,6 +353,7 @@ CREATE TABLE IF NOT EXISTS "internships_history" (
     "student_registration" bigint,
     "student_name" text,
     "course_sigla" text,
+    "company_id" UUID,
     "company_name" text,
     "start_date" date,
     "end_date" date,
@@ -373,12 +375,12 @@ BEGIN
         INSERT INTO internships_history (
             internship_id, operation, changed_at,
             user_id, student_registration, student_name, course_sigla, 
-            company_name, start_date, end_date, json_data, 
+            company_id, company_name, start_date, end_date, json_data, 
             created_at, updated_at, last_modified_by, status
         ) VALUES (
             OLD.id, 'D', NOW(),
             OLD.user_id, OLD.student_registration, OLD.student_name, OLD.course_sigla, 
-            OLD.company_name, OLD.start_date, OLD.end_date, OLD.json_data, 
+            OLD.company_id, OLD.company_name, OLD.start_date, OLD.end_date, OLD.json_data, 
             OLD.created_at, OLD.updated_at, OLD.last_modified_by, OLD.status
         );
         RETURN OLD;
@@ -386,12 +388,12 @@ BEGIN
         INSERT INTO internships_history (
             internship_id, operation, changed_at,
             user_id, student_registration, student_name, course_sigla, 
-            company_name, start_date, end_date, json_data, 
+            company_id, company_name, start_date, end_date, json_data, 
             created_at, updated_at, last_modified_by, status
         ) VALUES (
             OLD.id, 'U', NOW(),
             OLD.user_id, OLD.student_registration, OLD.student_name, OLD.course_sigla, 
-            OLD.company_name, OLD.start_date, OLD.end_date, OLD.json_data, 
+            OLD.company_id, OLD.company_name, OLD.start_date, OLD.end_date, OLD.json_data, 
             OLD.created_at, OLD.updated_at, OLD.last_modified_by, OLD.status
         );
         RETURN NEW;
