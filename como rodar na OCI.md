@@ -1,29 +1,91 @@
+# Passo 1: Acessar o servidor
 
-Passo 1: Acessar o servidor
 Abra seu terminal e acesse a máquina com sua chave SSH (mesmo comando que você usou antes):
 
+```bash
 ssh -i "caminho/para/sua/chave.pem" ubuntu@seu_ip_da_oci
+```
 
-Passo 2: Atualizar o sistema
+# Passo 2: Atualizar o sistema
+
 Logo após conectar, vamos garantir que a máquina está atualizada:
 
+```bash
 sudo apt update && sudo apt upgrade -y
+```
 
-Passo 3: Instalar o Docker e o Docker Compose
+# Neste ponto é melhor colocar um swap de disco porque estes servidores não tem memória RAM suficiente
+
+# Para colocar um swap de disco você pode usar o comando abaixo:
+
+# veja o arquivo SETUP_SWAP.md
+
+```bash
+sudo fallocate -l 2G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+```
+
+# Para tornar o swap permanente, adicione a seguinte linha ao arquivo /etc/fstab:
+
+```bash
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+```
+
+# Ajustar o Swappiness (Opcional, mas recomendado)
+
+```bash
+sudo sysctl vm.swappiness=10
+echo 'vm.swappiness=10' | sudo tee -a /etc/sysctl.conf
+```
+
+Ajustar a pressão do cache (Opcional)
+
+```bash
+sudo sysctl vm.vfs_cache_pressure=50
+echo 'vm.vfs_cache_pressure=50' | sudo tee -a /etc/sysctl.conf
+```
+
+## Como Verificar
+
+Para verificar se o swap está ativo, use o comando:
+
+```bash
+sudo free -h
+```
+
+Ou:
+
+```bash
+sudo swapon --show
+```
+
+# Passo 3: Instalar o Docker e o Docker Compose
+
 Rode os seguintes comandos no terminal do servidor para instalar a engine do Docker:
 
 # Baixa e roda o script oficial de instalação do Docker
+
+```bash
 curl -fsSL https://get.docker.com -o get-docker.sh
 sudo sh get-docker.sh
+```
 
 # Adiciona o usuário "ubuntu" ao grupo docker para rodar sem precisar de "sudo" toda hora
+
+```bash
 sudo usermod -aG docker ubuntu
+```
 
 # Instala o plugin do Docker Compose
+
+```bash
 sudo apt install docker-compose-plugin -y
+```
 
 (Após rodar o comando do usermod, você precisará sair com exit e
- entrar no SSH novamente para a permissão aplicar).
+entrar no SSH novamente para a permissão aplicar).
 
 Passo 4: Liberar as portas no Firewall
 Na OCI, você terá duas barreiras de firewall:
@@ -32,9 +94,11 @@ Firewall do Servidor (Iptables/UFW):
 No próprio servidor ubuntu da OCI, certifique-se de
 liberar as portas 80 (HTTP) e 443 (HTTPS se for usar no futuro):
 
+```bash
 sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 80 -j ACCEPT
 sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 443 -j ACCEPT
 sudo netfilter-persistent save
+```
 
 Security List da OCI (Painel Web):
 Acesse o painel da Oracle Cloud.
@@ -61,13 +125,13 @@ você não pode esquecer de criar e preencher o
 arquivo ./backend/.env que seu Docker Compose pede:
 
 nano backend/.env
+
 # preencha com as variáveis do seu servidor,
+
 depois Ctrl+O, Enter, Ctrl+X para salvar e sair
 
 Em seguida, basta subir todos os contêineres:
+
+```bash
 docker compose up -d --build
-
-
-
-
-
+```
