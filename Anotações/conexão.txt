@@ -1,0 +1,6 @@
+
+este projeto esta usando um servidor da OCI
+da conta luizkrx@gmail.com
+
+ssh -i ssh-key-2026-04-03.key ubuntu@137.131.158.89
+
