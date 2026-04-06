@@ -107,24 +107,33 @@ const emailService = {
     /**
      * Notifica o professor que há um TCE aguardando análise.
      */
-    sendTCEWaitingApprovalToTeacher: async (to, studentName, companyName, link) => {
+    sendTCEWaitingApprovalToTeacher: async (to, studentName, companyName, link, companyEmail) => {
         try {
             const html = emailService._renderTemplate('tce_teacher', {
                 studentName,
                 companyName,
+                companyEmail: companyEmail || 'Não informado',
                 link,
                 year: new Date().getFullYear()
             });
 
             if (!html) throw new Error('Não foi possível carregar o template tce_teacher');
 
-            return await resend.emails.send({
+            const emailData = {
                 from: config.resend.from,
                 to: to,
                 cc: [config.resend.tceManagerEmail], // Cópia para o setor de estágios configurado
                 subject: `📝 Pendência de Análise: TCE de ${studentName}`,
                 html: html
-            });
+            };
+
+            if (companyEmail) {
+                // Configura o email da empresa como "responder para", para que o professor
+                // consiga responder direto do seu cliente de e-mail.
+                emailData.replyTo = companyEmail;
+            }
+
+            return await resend.emails.send(emailData);
         } catch (err) {
             console.error('[EMAIL SERVICE] Erro ao enviar para professor:', err);
             return { success: false, error: err };

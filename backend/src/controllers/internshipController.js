@@ -347,8 +347,11 @@ exports.updateInternship = async (req, res, next) => {
                 // Tenta pegar o e-mail do professor diretamente do formulário (mais robusto)
                 const formTeacherEmail = updatedInternship.jsonData?.email_professor || updatedInternship.jsonData?.EmailProfessor;
 
+                // E-mail da empresa (caso não esteja no req.user, pode buscar no form também)
+                const finalCompanyEmail = companyEmail || updatedInternship.jsonData?.email_concedente;
+
                 if (formTeacherEmail && formTeacherEmail.includes('@')) {
-                    emailService.sendTCEWaitingApprovalToTeacher(formTeacherEmail, studentName, companyName, link)
+                    emailService.sendTCEWaitingApprovalToTeacher(formTeacherEmail, studentName, companyName, link, finalCompanyEmail)
                         .catch(err => console.error('[EMAIL ERROR] Falha ao notificar professor (pelo e-mail do form):', err));
                 } else {
                     // Fallback: busca no banco pelo nome completo se não houver e-mail no formulário
@@ -358,7 +361,7 @@ exports.updateInternship = async (req, res, next) => {
                         .limit(1)
                         .then(([prof]) => {
                             if (prof && prof.email) {
-                                emailService.sendTCEWaitingApprovalToTeacher(prof.email, studentName, companyName, link)
+                                emailService.sendTCEWaitingApprovalToTeacher(prof.email, studentName, companyName, link, finalCompanyEmail)
                                     .catch(err => console.error('[EMAIL ERROR] Falha ao notificar professor (pelo banco):', err));
                             } else {
                                 console.warn(`[EMAIL WARNING] E-mail do professor ${teacherName} não encontrado no form nem no banco.`);
@@ -432,8 +435,10 @@ exports.notifyTeacherConference = async (req, res, next) => {
         const baseUrl = config.corsOrigin[0] || 'http://localhost:5173';
         const link = `${baseUrl}/gotce?id=${id}`;
 
+        const companyEmail = (req.user && req.user.email) ? req.user.email : internship.jsonData?.email_concedente;
+
         // 1. Notificar Professor (Orientador)
-        await emailService.sendTCEWaitingApprovalToTeacher(email, studentName, companyName, link);
+        await emailService.sendTCEWaitingApprovalToTeacher(email, studentName, companyName, link, companyEmail);
 
         // 3. ATUALIZAR STATUS DO ESTÁGIO (Novo Requisito: Só muda status se e-mail for enviado)
         // Isso oficializa a submissão para o professor
