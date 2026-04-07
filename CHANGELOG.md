@@ -5,6 +5,13 @@ Todas as mudanças notáveis para o projeto **GetMaisDigitalOcean** serão docum
 O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
 e este projeto adere ao [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.5] - 2026-04-06
+
+### Changed
+- **Versão**: Atualizada a versão do projeto para 1.4.5.
+
+---
+
 ## [1.4.0] - 2026-03-30
 
 ### Added
