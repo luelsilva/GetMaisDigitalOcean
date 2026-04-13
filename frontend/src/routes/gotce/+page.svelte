@@ -547,6 +547,14 @@
 
 		syncTurno();
 		await checkInternshipPeriod();
+
+		if (type === 'pdf') {
+			const now = new Date();
+			formValues['data_hora_conversao'] = now.toLocaleString('pt-BR');
+			formValues['data_conversao'] = now.toLocaleDateString('pt-BR');
+			formValues['hora_conversao'] = now.toLocaleTimeString('pt-BR');
+		}
+
 		submitting = true;
 		if (type === 'pdf') {
 			if (successLink) URL.revokeObjectURL(successLink);
