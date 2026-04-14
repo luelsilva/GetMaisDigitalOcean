@@ -102,7 +102,7 @@
 		}
 	});
 
-	// Lógica para preencher sigla_curso quando o curso é selecionado
+	// Lógica para preencher sigla_curso e limpar professor quando o curso é selecionado ou alterado
 	$effect(() => {
 		const selectedCourse =
 			formValues['nome_curso'] || formValues['NomeCurso'] || formValues['sigla_curso'];
@@ -112,7 +112,23 @@
 				(c: any) => c.name == selectedCourse || c.sigla == selectedCourse
 			);
 			if (course) {
-				formValues['sigla_curso'] = course.sigla;
+				if (formValues['sigla_curso'] !== course.sigla) {
+					formValues['sigla_curso'] = course.sigla;
+				}
+
+				// Limpar selecionado se o professor atual não pertencer a este curso
+				const currentTeacher = formValues['nome_professor'] || formValues['NomeProfessor'];
+				if (currentTeacher) {
+					const isTeacherInCourse = course.teachers && course.teachers.some((t: any) => t.name === currentTeacher);
+					if (!isTeacherInCourse) {
+						formValues['nome_professor'] = '';
+						if (formValues['NomeProfessor'] !== undefined) formValues['NomeProfessor'] = '';
+						formValues['email_professor'] = '';
+						if (formValues['EmailProfessor'] !== undefined) formValues['EmailProfessor'] = '';
+						formValues['matricula_professor'] = '';
+						formValues['cpf_professor'] = '';
+					}
+				}
 			}
 		}
 	});
@@ -145,8 +161,24 @@
 			}));
 		}
 
-		if (isTeacherField && pageData.teachers && pageData.teachers.length > 0) {
-			return pageData.teachers.map((t: any) => ({ value: t.name, label: t.name }));
+		if (isTeacherField) {
+			let allowedTeachers = pageData.teachers;
+			const selectedCourse =
+				formValues['nome_curso'] || formValues['NomeCurso'] || formValues['sigla_curso'];
+
+			if (selectedCourse && pageData.courses) {
+				const course = pageData.courses.find(
+					(c: any) => c.name == selectedCourse || c.sigla == selectedCourse
+				);
+				if (course) {
+					allowedTeachers = course.teachers || [];
+				}
+			}
+
+			if (allowedTeachers && allowedTeachers.length > 0) {
+				return allowedTeachers.map((t: any) => ({ value: t.name, label: t.name }));
+			}
+			return [];
 		}
 
 		if (!form?.secoes) return [];
