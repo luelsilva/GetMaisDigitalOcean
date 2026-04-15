@@ -1,6 +1,6 @@
 const { db } = require('../db');
 const { internships, profiles } = require('../db/schema');
-const { eq, desc, asc, or, ilike, sql, and, isNull } = require('drizzle-orm');
+const { eq, desc, asc, or, ilike, sql, and, isNull, inArray } = require('drizzle-orm');
 const emailService = require('../services/emailService');
 const config = require('../config');
 
@@ -41,9 +41,10 @@ exports.getAllInternships = async (req, res, next) => {
 
         // Filtro por Status
         if (status) {
+            const statusArray = status.includes(',') ? status.split(',') : [status];
             whereClause = and(
                 whereClause,
-                eq(internships.status, status)
+                inArray(internships.status, statusArray)
             );
         }
 

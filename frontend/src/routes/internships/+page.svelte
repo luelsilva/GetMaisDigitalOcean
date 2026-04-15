@@ -36,7 +36,28 @@
 	let isDeletingId = $state<string | null>(null);
 	let teachers = $state<Teacher[]>([]);
 	let selectedTeacher = $state('');
-	let selectedStatus = $state('');
+	let selectedStatuses = $state<string[]>([]);
+
+	const statusLabels: Record<string, string> = {
+		DRAFT: 'Editando',
+		WAITING_APPROVAL: 'Aguardando Aprovação',
+		APPROVED: 'Aprovado',
+		STARTED: 'Estagiando'
+	};
+
+	function toggleStatus(status: string) {
+		if (selectedStatuses.includes(status)) {
+			selectedStatuses = selectedStatuses.filter((s) => s !== status);
+		} else {
+			selectedStatuses = [...selectedStatuses, status];
+		}
+		triggerSearch();
+	}
+
+	function clearStatuses() {
+		selectedStatuses = [];
+		triggerSearch();
+	}
 
 	// Filtros e Paginação (Server-side)
 	let searchTerm = $state('');
@@ -55,7 +76,7 @@
 				search: searchTerm,
 				studentName: searchName,
 				teacher: selectedTeacher,
-				status: selectedStatus
+				status: selectedStatuses.join(',')
 			});
 
 			const response = await apiFetch(`/internships?${query.toString()}`);
@@ -263,18 +284,29 @@
 					{/each}
 				</select>
 
-				<select
-					bind:value={selectedStatus}
-					onchange={triggerSearch}
-					class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500 md:w-48"
-				>
-					<option value="">Status (Todos)</option>
-					<option value="DRAFT">Editando</option>
-					<option value="WAITING_APPROVAL">Aguardando Aprovação</option>
-					<option value="REVISION_REQUESTED">Revisão Solicitada</option>
-					<option value="APPROVED">Aprovado</option>
-					<option value="STARTED">Estagiando</option>
-				</select>
+				<div class="flex flex-wrap items-center gap-2 rounded-xl border border-slate-100 bg-slate-50/50 p-1">
+					<button
+						onclick={clearStatuses}
+						class="rounded-lg px-3 py-1.5 text-xs font-black transition-all {selectedStatuses.length ===
+						0
+							? 'bg-white text-indigo-600 shadow-sm'
+							: 'text-slate-500 hover:bg-white/50'}"
+					>
+						Todos
+					</button>
+					{#each Object.entries(statusLabels) as [value, label]}
+						<button
+							onclick={() => toggleStatus(value)}
+							class="rounded-lg px-3 py-1.5 text-xs font-black transition-all {selectedStatuses.includes(
+								value
+							)
+								? 'bg-indigo-600 text-white shadow-md'
+								: 'text-slate-500 hover:bg-white hover:text-indigo-600'}"
+						>
+							{label}
+						</button>
+					{/each}
+				</div>
 
 				<div class="flex-grow"></div>
 
