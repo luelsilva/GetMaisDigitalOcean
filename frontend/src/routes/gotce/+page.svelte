@@ -807,22 +807,12 @@
 				<strong class="text-indigo-600">
 					{pendingStatus === 'DRAFT' ? 'Editando' : 
 					 pendingStatus === 'WAITING_APPROVAL' ? 'Aguardando Aprovação' : 
-					 pendingStatus === 'REVISION_REQUESTED' ? 'Solicitar Revisão' : 
 					 pendingStatus === 'APPROVED' ? 'Aprovado' : 
 					 pendingStatus === 'STARTED' ? 'Estagiando' : pendingStatus}
 				</strong>?<br>
 			</p>
 			
-			{#if pendingStatus === 'REVISION_REQUESTED'}
-				<div class="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-left shadow-sm">
-					<p class="text-sm font-bold text-rose-800">
-						🛑 Atenção!
-					</p>
-					<p class="mt-1 text-xs text-rose-700">
-						Caso confirme, não esqueça de informar a empresa para fazer as correções necessárias.
-					</p>
-				</div>
-			{:else if pendingStatus === 'APPROVED'}
+			{#if pendingStatus === 'APPROVED'}
 				<div class="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-left shadow-sm">
 					<p class="text-sm font-bold text-emerald-800">
 						✅ Quase lá!
@@ -996,14 +986,14 @@
 						<div class="flex w-full max-w-2xl flex-col items-center gap-3 rounded-xl border border-indigo-100 bg-indigo-50/50 p-4 shadow-sm">
 							<span class="text-xs font-black text-indigo-900 uppercase tracking-wider">Mudar Status do Termo (Uso da Instituição)</span>
 							<div class="flex w-full flex-wrap justify-center gap-2">
-								{#each ['DRAFT', 'WAITING_APPROVAL', 'REVISION_REQUESTED', 'APPROVED', 'STARTED'] as st}
+								{#each ['DRAFT', 'WAITING_APPROVAL', 'APPROVED', 'STARTED'] as st}
 									<button
 										type="button"
 										disabled={internshipStatus === st}
 										onclick={() => { pendingStatus = st; showStatusModal = true; }}
 										class="rounded-lg px-3 py-1.5 text-xs font-bold transition-all {internshipStatus === st ? 'bg-indigo-600 text-white shadow-md scale-105 cursor-default opacity-90' : 'bg-white text-indigo-600 border border-indigo-200 hover:bg-indigo-100 hover:scale-105'}"
 									>
-										{st === 'DRAFT' ? 'Editando' : st === 'WAITING_APPROVAL' ? 'Aguardando Aprovação' : st === 'REVISION_REQUESTED' ? 'Solicitar Revisão' : st === 'APPROVED' ? 'Aprovar' : 'Estagiando'}
+										{st === 'DRAFT' ? 'Editando' : st === 'WAITING_APPROVAL' ? 'Aguardando Aprovação' : st === 'APPROVED' ? 'Aprovar' : 'Estagiando'}
 									</button>
 								{/each}
 							</div>
