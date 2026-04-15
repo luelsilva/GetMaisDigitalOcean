@@ -35,19 +35,45 @@
 	let pendingStatus = $state('');
 
 	let toastMessage = $state('');
-	let toastType = $state<'success' | 'error'>('success');
+	let toastType = $state<'success' | 'error' | 'warning'>('success');
 
 	let showSavedModal = $state(false);
 	let sendingEmail = $state(false);
 	let lastSavedId = $state('');
 
 
-	function showToast(message: string, type: 'success' | 'error' = 'success') {
+	function showToast(message: string, type: 'success' | 'error' | 'warning' = 'success') {
 		toastMessage = message;
 		toastType = type;
+		// Mensagens de erro ou aviso ficam por mais tempo
+		const duration = type === 'success' ? 3000 : 6000;
 		setTimeout(() => {
-			toastMessage = '';
-		}, 3000);
+			if (toastMessage === message) {
+				toastMessage = '';
+			}
+		}, duration);
+	}
+
+	function checkMissingRequiredFields() {
+		const missing: string[] = [];
+		if (form?.secoes) {
+			form.secoes.forEach((secao: any) => {
+				secao.rows.forEach((row: any) => {
+					row.cols.forEach((col: any) => {
+						const inputId = col.id;
+						if (!inputId || col.type === 'hidden' || col.type === 'readonly') return;
+						
+						if (col.required !== false) {
+							const val = formValues[inputId];
+							if (val === undefined || val === null || String(val).trim() === "") {
+								missing.push(col.label);
+							}
+						}
+					});
+				});
+			});
+		}
+		return missing;
 	}
 
 	function markAsModified() {
@@ -530,12 +556,21 @@
 				saveSuccess = true;
 				formModified = false; // Reseta depois de salvar
 				const savedData = await response.json();
-				showToast(
-					pageData.mode === 'edit'
-						? 'Estágio atualizado com sucesso!'
-						: 'Estágio salvo com sucesso!',
-					'success'
-				);
+
+				const missing = checkMissingRequiredFields();
+				if (missing.length > 0) {
+					showToast(
+						`Salvo com sucesso! Porém existem ${missing.length} campo(s) obrigatório(s) pendente(s).`,
+						'warning'
+					);
+				} else {
+					showToast(
+						pageData.mode === 'edit'
+							? 'Estágio atualizado com sucesso!'
+							: 'Estágio salvo com sucesso!',
+						'success'
+					);
+				}
 				
 				lastSavedId = savedData.id;
 
@@ -1117,7 +1152,7 @@
 	{#if toastMessage}
 		<div
 			class="fixed right-4 bottom-4 z-50 rounded-lg px-6 py-3 text-white shadow-lg transition-all"
-			style="background-color: {toastType === 'success' ? '#10B981' : '#EF4444'};"
+			style="background-color: {toastType === 'success' ? '#10B981' : toastType === 'warning' ? '#f59e0b' : '#EF4444'};"
 			in:fade
 		>
 			<p class="font-bold">{toastMessage}</p>
