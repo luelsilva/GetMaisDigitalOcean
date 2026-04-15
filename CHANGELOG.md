@@ -5,6 +5,21 @@ Todas as mudanças notáveis para o projeto **GetMaisDigitalOcean** serão docum
 O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
 e este projeto adere ao [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-04-15
+
+### Added
+- **Validação Não-Bloqueante**: Implementada validação de campos obrigatórios ao salvar sem impedir a operação, exibindo um aviso (toast âmbar) com a contagem de campos pendentes.
+
+### Changed
+- **Versão**: Atualizada a versão do projeto para 1.5.0.
+- **UX**: Botão "Solicitar Revisão" removido da interface conforme solicitação por ser pouco funcional no momento.
+- **Sistema de Toast**: Adicionado suporte para notificações do tipo `warning` com tempo de exibição estendido.
+
+### Fixed
+- **Integridade de Dados**: Mantido o bloqueio obrigatório (ERRO) para Nome do Aluno e Curso no salvamento, evitando registros vazios na listagem.
+
+---
+
 ## [1.4.5] - 2026-04-06
 
 ### Changed
