@@ -2,4 +2,6 @@
 
 este app esta no serviudor da OcomFreeTier
 conta: luizkrx@gmail.com
-instance-20260403-1041
+instance-20260403-1835
+
+IP: 137.131.158.89
