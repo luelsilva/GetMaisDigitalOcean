@@ -1,0 +1,37 @@
+analize estas intruções e se tiver alguma dúvida me pergunte.
+
+monte a página com os botões gerar pdf e salvar estágio no modo invisível.
+acima dos botões coloque duas linhas com as seguintes informações:
+
+se for um documento novo:
+	1a linha: Este documento esta no modo de criação.
+	2a.linha: Após preencher os campos clique em salvar estágio.
+	libere o botão salvar estágio.
+
+se for um documento com status 'DRAFT'
+	1a linha: Este documento esta no modo de edição.
+	2a.linha: Após editar os campos clique em atualizar estágio.
+	libere o botão salvar estágio.
+
+se for um documento com status 'WAITING_APPROVAL' e for usuário tipo 'COMPANY'
+	1a linha: Este documento esta aguardando revisão e aprovação do professor
+	2a.linha: e não poderá de modificado.
+	não libere nenhum botão
+
+se for um documento com status 'WAITING_APPROVAL' e for usuário tipo 'TEACHER' ou 'ADMIN' ou 'SUDO'
+	1a linha: Professor, revise, faça as correções que se fizerem necessárias e clique em aprovar.
+	2a.linha: Caso não seja possível fazer as correções que se fizerem necessárias, altere o status do TCE para "editando" e envie um email a empresa para fazer as correções.
+	libere o botão "Mudar para Editando" e "Aprovar"	
+
+se for um documento com status 'APPROVED'
+	1a. linha: Este documento foi revisado e aprovado pelo professor.
+	2a. linha: Voce pode agora gerar os PDFs, imprimir em 3 vias e colher as assinaturas.
+	libere o botão gerar pdf
+
+se for um documento com status 'STARTED'
+	1a. linha: Este documento já foi assinado e registrado.
+	2a. linha: O aluno já iniciou o estágio.
+	não libere nenhum botão
+
+
+
