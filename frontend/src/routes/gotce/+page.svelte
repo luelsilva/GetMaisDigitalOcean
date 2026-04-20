@@ -40,6 +40,79 @@
 	let showSavedModal = $state(false);
 	let sendingEmail = $state(false);
 	let lastSavedId = $state('');
+	
+	const uiState = $derived.by(() => {
+		const role = ($user?.roles || $user?.role || '').toString().toLowerCase();
+		const status = internshipStatus;
+		const isNew = pageData.mode === 'new';
+
+		if (isNew) {
+			return {
+				line1: "Este documento está no modo de criação.",
+				line2: "Após preencher os campos clique em salvar estágio.",
+				showSave: true,
+				showPdf: false,
+				statusButtons: []
+			};
+		}
+
+		if (status === 'DRAFT') {
+			return {
+				line1: "Este documento está no modo de edição.",
+				line2: "Após editar os campos clique em atualizar estágio.",
+				showSave: true,
+				showPdf: false,
+				statusButtons: isAuthority ? ['DRAFT', 'WAITING_APPROVAL', 'APPROVED', 'STARTED'] : []
+			};
+		}
+
+		if (status === 'WAITING_APPROVAL') {
+			if (isAuthority) {
+				return {
+					line1: "Professor, revise, faça as correções que se fizerem necessárias e clique em aprovar.",
+					line2: "Caso não seja possível fazer as correções que se fizerem necessárias, altere o status do TCE para \"editando\" e envie um email a empresa para fazer as correções.",
+					showSave: true,
+					showPdf: false,
+					statusButtons: ['DRAFT', 'APPROVED']
+				};
+			}
+			return {
+				line1: "Este documento está aguardando revisão e aprovação do professor",
+				line2: "e não poderá ser modificado.",
+				showSave: false,
+				showPdf: false,
+				statusButtons: []
+			};
+		}
+
+		if (status === 'APPROVED') {
+			return {
+				line1: "Este documento foi revisado e aprovado pelo professor.",
+				line2: "Você pode agora gerar os PDFs, imprimir em 3 vias e colher as assinaturas.",
+				showSave: false,
+				showPdf: true,
+				statusButtons: isAuthority ? ['DRAFT', 'WAITING_APPROVAL', 'APPROVED', 'STARTED'] : []
+			};
+		}
+
+		if (status === 'STARTED') {
+			return {
+				line1: "Este documento já foi assinado e registrado.",
+				line2: "O aluno já iniciou o estágio.",
+				showSave: false,
+				showPdf: false,
+				statusButtons: isAuthority ? ['DRAFT', 'WAITING_APPROVAL', 'APPROVED', 'STARTED'] : []
+			};
+		}
+
+		return { 
+            line1: "", 
+            line2: "", 
+            showSave: false, 
+            showPdf: false, 
+            statusButtons: isAuthority ? ['DRAFT', 'WAITING_APPROVAL', 'APPROVED', 'STARTED'] : [] 
+        };
+	});
 
 
 	function showToast(message: string, type: 'success' | 'error' | 'warning' = 'success') {
@@ -603,6 +676,7 @@
 	}
 
 	async function handleSubmit(type = 'pdf') {
+		/* 
 		// Se o formulário tiver modificações pendentes, salve primeiro antes de gerar
 		if (formModified) {
 			await handleSave();
@@ -611,6 +685,7 @@
 				return;
 			}
 		}
+		*/
 
 		syncTurno();
 		await checkInternshipPeriod();
@@ -1049,53 +1124,64 @@
 
 
 				<div class="mt-8 flex w-full flex-col items-center gap-4">
-					{#if isAuthority && pageData.mode === 'edit'}
+					{#if isAuthority && pageData.mode === 'edit' && uiState.statusButtons.length > 0}
 						<div class="flex w-full max-w-2xl flex-col items-center gap-3 rounded-xl border border-indigo-100 bg-indigo-50/50 p-4 shadow-sm">
 							<span class="text-xs font-black text-indigo-900 uppercase tracking-wider">Mudar Status do Termo (Uso da Instituição)</span>
 							<div class="flex w-full flex-wrap justify-center gap-2">
-								{#each ['DRAFT', 'WAITING_APPROVAL', 'APPROVED', 'STARTED'] as st}
+								{#each uiState.statusButtons as st}
 									<button
 										type="button"
 										disabled={internshipStatus === st}
 										onclick={() => { pendingStatus = st; showStatusModal = true; }}
 										class="rounded-lg px-3 py-1.5 text-xs font-bold transition-all {internshipStatus === st ? 'bg-indigo-600 text-white shadow-md scale-105 cursor-default opacity-90' : 'bg-white text-indigo-600 border border-indigo-200 hover:bg-indigo-100 hover:scale-105'}"
 									>
-										{st === 'DRAFT' ? 'Editando' : st === 'WAITING_APPROVAL' ? 'Aguardando Aprovação' : st === 'APPROVED' ? 'Aprovar' : 'Estagiando'}
+										{st === 'DRAFT' ? 'Mudar para Editando' : st === 'WAITING_APPROVAL' ? 'Aguardando Aprovação' : st === 'APPROVED' ? 'Aprovar' : 'Estagiando'}
 									</button>
 								{/each}
 							</div>
 						</div>
 					{/if}
 
-					<div class="flex w-full max-w-2xl gap-4 flex-col sm:flex-row">
-						<button
-							type="button"
-							onclick={handleSave}
-							disabled={!formModified || saving}
-							class="btn-submit flex-1"
-							style="background-color: {form.tituloColor}; opacity: {!formModified || saving
-								? 0.5
-								: 1}; cursor: {!formModified || saving ? 'not-allowed' : 'pointer'};"
-						>
-							{#if saving}
-								<span class="mr-2 animate-spin">🌀</span> Salvando...
-							{:else}
-								💾 {pageData.mode === 'edit' ? 'Atualizar' : 'Salvar'} Estágio
-							{/if}
-						</button>
+					{#if uiState.line1}
+						<div class="flex w-full max-w-2xl flex-col items-center text-center gap-1 py-4 border-t border-b border-gray-100">
+							<p class="text-lg font-bold text-slate-800">{uiState.line1}</p>
+							<p class="text-sm text-slate-500">{uiState.line2}</p>
+						</div>
+					{/if}
 
-						<button
-							type="submit"
-							disabled={submitting}
-							class="btn-submit flex-1"
-							style="background-color: #dc2626"
-						>
-							{#if submitting}
-								<span class="mr-2 animate-spin">🌀</span> Processando...
-							{:else}
-								📕 Gerar PDF
-							{/if}
-						</button>
+					<div class="flex w-full max-w-2xl gap-4 flex-col sm:flex-row">
+						{#if uiState.showSave}
+							<button
+								type="button"
+								onclick={handleSave}
+								disabled={!formModified || saving}
+								class="btn-submit flex-1"
+								style="background-color: {form.tituloColor}; opacity: {!formModified || saving
+									? 0.5
+									: 1}; cursor: {!formModified || saving ? 'not-allowed' : 'pointer'};"
+							>
+								{#if saving}
+									<span class="mr-2 animate-spin">🌀</span> Salvando...
+								{:else}
+									💾 {pageData.mode === 'edit' ? 'Atualizar' : 'Salvar'} Estágio
+								{/if}
+							</button>
+						{/if}
+
+						{#if uiState.showPdf}
+							<button
+								type="submit"
+								disabled={submitting}
+								class="btn-submit flex-1"
+								style="background-color: #dc2626"
+							>
+								{#if submitting}
+									<span class="mr-2 animate-spin">🌀</span> Processando...
+								{:else}
+									📕 Gerar PDF
+								{/if}
+							</button>
+						{/if}
 
 						<!-- 
 						<button
