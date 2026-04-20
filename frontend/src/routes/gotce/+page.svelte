@@ -790,7 +790,7 @@
 			const res = await apiFetch(endpoint, {
 				method: 'POST',
 				body: JSON.stringify(payload)
-			});
+			}, 60000); // Aumentado para 60 segundos por ser um processo pesado
 
 			if (res.ok) {
 				const blob = await res.blob();
