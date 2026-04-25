@@ -412,3 +412,30 @@ CREATE TRIGGER trigger_log_internships
     EXECUTE FUNCTION log_internships_changes();
 
 COMMENT ON TABLE internships_history IS 'Histórico de alterações e exclusões da tabela de estágios';
+
+
+-- ============================================
+-- TABELA DE CONFIGURAÇÕES GLOBAIS (Feature Flags)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS "app_settings" (
+    "id" SERIAL PRIMARY KEY,
+    "key" VARCHAR(100) NOT NULL UNIQUE,
+    "value" JSONB NOT NULL,
+    "updated_at" TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+ALTER TABLE app_settings ENABLE ROW LEVEL SECURITY;
+
+-- Trigger para atualizar updated_at em app_settings
+DROP TRIGGER IF EXISTS app_settings_updated_at_trigger ON app_settings;
+CREATE TRIGGER app_settings_updated_at_trigger
+    BEFORE UPDATE ON app_settings
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+COMMENT ON TABLE app_settings IS 'Tabela de configurações globais e Feature Flags do sistema';
+
+-- Inserir flag inicial para o Novo TCE (desativado por padrão)
+INSERT INTO app_settings (key, value) 
+VALUES ('feature_flags', '{"use_tce_v2": false}')
+ON CONFLICT (key) DO NOTHING;

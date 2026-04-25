@@ -29,9 +29,10 @@ const userRoutes = require('./routes/userRoutes');
 const formRoutes = require('./routes/formRoutes');
 const internshipRoutes = require('./routes/internshipRoutes');
 const keepAliveRoutes = require('./routes/keepAliveRoutes');
-const dbRoutes = require('./routes/dbRoutes');
+const configRoutes = require('./routes/configRoutes');
 // Rotas
 app.use('/api/auth', authRoutes);
+app.use('/api/config', configRoutes);
 app.use('/api/menu', menuRoutes);
 app.use('/api/admin/menu', adminMenuRoutes);
 app.use('/api/documentos', documentRoutes);
@@ -41,8 +42,6 @@ app.use('/api/usuarios', userRoutes);
 app.use('/api/forms', formRoutes);
 app.use('/api/internships', internshipRoutes);
 app.use('/api/system', keepAliveRoutes);
-app.use('/api/db', dbRoutes);
-
 
 // Rota de Teste
 app.get('/', (req, res) => {

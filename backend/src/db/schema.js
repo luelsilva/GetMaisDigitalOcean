@@ -130,6 +130,13 @@ const internships = pgTable('internships', {
     status: internshipStatusEnum('status').default('DRAFT').notNull()
 });
 
+const appSettings = pgTable('app_settings', {
+    id: serial('id').primaryKey(),
+    key: varchar('key', { length: 100 }).notNull().unique(),
+    value: jsonb('value').notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});
+
 module.exports = {
     profiles,
     otpCodes,
@@ -141,5 +148,6 @@ module.exports = {
     courseTeachers,
     formModels,
     internships,
-    keepAlive
+    keepAlive,
+    appSettings
 };

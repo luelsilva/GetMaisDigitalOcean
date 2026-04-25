@@ -22,20 +22,8 @@ export const load: PageLoad = async ({ fetch, url }) => {
         throw redirect(307, `/company/login?returnTo=${url.pathname}${url.search}`);
     }
 
-    // Verificação de Feature Flag para Nova Versão (v2)
-    try {
-        const featuresRes = await apiFetch('/config/features', {}, fetch);
-        if (featuresRes.ok) {
-            const features = await featuresRes.json();
-            if (features.use_tce_v2) {
-                throw redirect(307, `/gotce/v2${url.search}`);
-            }
-        }
-    } catch (err: any) {
-        if (err.status === 307) throw err; // Repassa o redirecionamento
-        console.warn('[FEATURE FLAG ERR]', err);
-        // Se der erro na checagem, continua na versão estável (v1)
-    }
+    // Nota: Não há verificação de Feature Flag aqui.
+    // Quem acessa /gotce/v2 já está na nova versão intencionalmente.
 
     try {
         // Sempre carrega o modelo 1501
@@ -91,7 +79,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
         };
     } catch (err: any) {
         if (err.status) throw err;
-        console.error('[GOTCE LOAD ERR]', err);
-        throw error(500, 'Erro ao carregar dados do formulário de estágio');
+        console.error('[GOTCE V2 LOAD ERR]', err);
+        throw error(500, 'Erro ao carregar dados do formulário de estágio (V2)');
     }
 };
