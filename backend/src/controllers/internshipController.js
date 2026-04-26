@@ -1,5 +1,5 @@
 const { db } = require('../db');
-const { internships, profiles } = require('../db/schema');
+const { internships, profiles, emailLogs } = require('../db/schema');
 const { eq, desc, asc, or, ilike, sql, and, isNull, inArray } = require('drizzle-orm');
 const emailService = require('../services/emailService');
 const config = require('../config');
@@ -340,6 +340,19 @@ exports.updateInternship = async (req, res, next) => {
             const companyEmail = req.user.email;
             if (companyEmail) {
                 emailService.sendTCEWaitingApprovalToCompany(companyEmail, studentName, teacherName, link)
+                    .then(async (response) => {
+                        if (response?.data?.id) {
+                            await db.insert(emailLogs).values({
+                                resendId: response.data.id,
+                                type: 'other',
+                                toEmail: companyEmail,
+                                subject: `📤 TCE de ${studentName} enviado para aprovação`,
+                                status: 'sent',
+                                internshipId: id,
+                                sentBy: req.user.id
+                            });
+                        }
+                    })
                     .catch(err => console.error('[EMAIL ERROR] Falha ao notificar empresa:', err));
             }
 
@@ -351,8 +364,23 @@ exports.updateInternship = async (req, res, next) => {
                 // E-mail da empresa (caso não esteja no req.user, pode buscar no form também)
                 const finalCompanyEmail = companyEmail || updatedInternship.jsonData?.email_concedente;
 
+                const logProfEmail = async (response, emailTarget) => {
+                    if (response?.data?.id) {
+                        await db.insert(emailLogs).values({
+                            resendId: response.data.id,
+                            type: 'notify_professor',
+                            toEmail: emailTarget,
+                            subject: `📝 Pendência de Análise: TCE de ${studentName}`,
+                            status: 'sent',
+                            internshipId: id,
+                            sentBy: req.user.id
+                        });
+                    }
+                };
+
                 if (formTeacherEmail && formTeacherEmail.includes('@')) {
                     emailService.sendTCEWaitingApprovalToTeacher(formTeacherEmail, studentName, companyName, link, finalCompanyEmail)
+                        .then(res => logProfEmail(res, formTeacherEmail))
                         .catch(err => console.error('[EMAIL ERROR] Falha ao notificar professor (pelo e-mail do form):', err));
                 } else {
                     // Fallback: busca no banco pelo nome completo se não houver e-mail no formulário
@@ -363,6 +391,7 @@ exports.updateInternship = async (req, res, next) => {
                         .then(([prof]) => {
                             if (prof && prof.email) {
                                 emailService.sendTCEWaitingApprovalToTeacher(prof.email, studentName, companyName, link, finalCompanyEmail)
+                                    .then(res => logProfEmail(res, prof.email))
                                     .catch(err => console.error('[EMAIL ERROR] Falha ao notificar professor (pelo banco):', err));
                             } else {
                                 console.warn(`[EMAIL WARNING] E-mail do professor ${teacherName} não encontrado no form nem no banco.`);
@@ -371,6 +400,7 @@ exports.updateInternship = async (req, res, next) => {
                         .catch(err => console.error('[DB ERROR] Falha ao buscar e-mail do professor no banco:', err));
                 }
             }
+
         }
 
         res.json(updatedInternship);
@@ -439,7 +469,18 @@ exports.notifyTeacherConference = async (req, res, next) => {
         const companyEmail = (req.user && req.user.email) ? req.user.email : internship.jsonData?.email_concedente;
 
         // 1. Notificar Professor (Orientador)
-        await emailService.sendTCEWaitingApprovalToTeacher(email, studentName, companyName, link, companyEmail);
+        const resProf = await emailService.sendTCEWaitingApprovalToTeacher(email, studentName, companyName, link, companyEmail);
+        if (resProf?.data?.id) {
+            await db.insert(emailLogs).values({
+                resendId: resProf.data.id,
+                type: 'notify_professor',
+                toEmail: email,
+                subject: `📝 Pendência de Análise: TCE de ${studentName}`,
+                status: 'sent',
+                internshipId: id,
+                sentBy: req.user.id
+            });
+        }
 
         // 3. ATUALIZAR STATUS DO ESTÁGIO (Novo Requisito: Só muda status se e-mail for enviado)
         // Isso oficializa a submissão para o professor
@@ -454,8 +495,21 @@ exports.notifyTeacherConference = async (req, res, next) => {
 
         // 2. Notificar a Empresa / Solicitante (Comprovante de Envio)
         if (req.user && req.user.email) {
-            await emailService.sendTCEWaitingApprovalToCompany(req.user.email, studentName, name, link)
-                .catch(err => console.error('[EMAIL ERROR] Falha ao notificar empresa (comprovante):', err));
+            const resComp = await emailService.sendTCEWaitingApprovalToCompany(req.user.email, studentName, name, link).catch(err => {
+                console.error('[EMAIL ERROR] Falha ao notificar empresa (comprovante):', err);
+                return null;
+            });
+            if (resComp?.data?.id) {
+                await db.insert(emailLogs).values({
+                    resendId: resComp.data.id,
+                    type: 'other',
+                    toEmail: req.user.email,
+                    subject: `📤 TCE de ${studentName} enviado para aprovação`,
+                    status: 'sent',
+                    internshipId: id,
+                    sentBy: req.user.id
+                });
+            }
         }
 
         res.json({ 

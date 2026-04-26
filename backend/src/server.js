@@ -30,8 +30,12 @@ const formRoutes = require('./routes/formRoutes');
 const internshipRoutes = require('./routes/internshipRoutes');
 const keepAliveRoutes = require('./routes/keepAliveRoutes');
 const configRoutes = require('./routes/configRoutes');
+const webhookRoutes = require('./routes/webhookRoutes');
+const emailRoutes = require('./routes/emailRoutes');
 // Rotas
 app.use('/api/auth', authRoutes);
+app.use('/api/webhooks', webhookRoutes);
+app.use('/api/emails', emailRoutes);
 app.use('/api/config', configRoutes);
 app.use('/api/menu', menuRoutes);
 app.use('/api/admin/menu', adminMenuRoutes);

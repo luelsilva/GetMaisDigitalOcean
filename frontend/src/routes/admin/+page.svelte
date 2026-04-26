@@ -7,6 +7,7 @@
         { title: 'Modelos de Formulário', description: 'Editar configurações de TCEs', link: '/admin/form-models', icon: '📝', color: '#f59e0b' },
         { title: 'Cursos', description: 'Gerenciar cursos técnicos', link: '/admin/courses', icon: '🎓', color: '#8b5cf6' },
         { title: 'Professores', description: 'Cadastro de orientadores', link: '/admin/teachers', icon: '👨‍🏫', color: '#ec4899' },
+        { title: 'Logs de E-mail', description: 'Histórico de envios e status', link: '/admin/emails', icon: '📧', color: '#0ea5e9' },
         { title: 'Configurações', description: 'Feature Flags e ajustes do sistema', link: '/admin/settings', icon: '⚙️', color: '#64748b' },
     ];
 </script>

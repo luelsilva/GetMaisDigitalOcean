@@ -23,7 +23,7 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3000
-      - ORIGIN=https://estagio.getmais.com.br
+      - ORIGIN=https://cedup.getmais.com.br
     # Sem portas expostas externamente (comunica via rede interna do docker)
     expose:
       - "3000"
