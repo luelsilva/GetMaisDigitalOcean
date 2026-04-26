@@ -851,10 +851,10 @@
 			if (res.ok) {
 				showToast('E-mail enviado ao professor com sucesso!');
 				showSaveResultModal = false;
-				// Se for um novo estágio, após enviar email, redireciona
-				if (pageData.mode === 'new') {
+				
+				setTimeout(() => {
 					window.location.href = `/gotce/v2?id=${lastSavedId}`;
-				}
+				}, 2000);
 			} else {
 				const err = await res.json();
 				showToast('Erro ao notificar professor: ' + (err.error || 'Erro desconhecido'), 'error');
