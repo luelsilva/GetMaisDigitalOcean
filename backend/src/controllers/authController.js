@@ -12,7 +12,7 @@ const authController = {
     // Registro de usuário
     register: async (req, res, next) => {
         try {
-            const { email, password, full_name, role } = req.body;
+            let { email, password, full_name, role } = req.body;
 
             // 1. Normalização e Hash da senha
             const normalizedEmail = email.toLowerCase();
