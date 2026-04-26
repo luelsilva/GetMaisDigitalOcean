@@ -4,7 +4,7 @@ const { pgTable, uuid, text, timestamp, boolean, pgEnum, serial, smallint, varch
 const otpTypeEnum = pgEnum('otp_type', ['registration', 'password_reset']);
 
 // Enum para roles de usuário
-const userRolesEnum = pgEnum('user_role', ['generic', 'student', 'company', 'teacher', 'admin', 'sudo']);
+const userRolesEnum = pgEnum('user_role', ['generic', 'student', 'company', 'to_company', 'teacher', 'admin', 'sudo']);
 
 const internshipStatusEnum = pgEnum('internship_status', ['DRAFT', 'WAITING_APPROVAL', 'REVISION_REQUESTED', 'APPROVED', 'STARTED']);
 

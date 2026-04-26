@@ -150,6 +150,13 @@
 		>
 			{isLoading ? 'Entrando...' : 'Entrar'}
 		</button>
+		
+		<div class="mt-6 text-center text-sm font-medium text-gray-600">
+			Ainda não tem uma conta?
+			<a href="/auth/signup" class="font-bold text-blue-600 hover:text-blue-500 transition-colors">
+				Cadastre-se
+			</a>
+		</div>
 	</form>
 
 	<div class="mt-10 border-t border-gray-50 pt-6 text-center tracking-widest uppercase">

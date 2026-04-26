@@ -25,7 +25,7 @@ EXCEPTION WHEN duplicate_object THEN null; END $$;
 -- 2^12 = Sudo
 -- ============================================ 
 DO $$ BEGIN
-    CREATE TYPE user_role AS ENUM ('generic', 'student', 'company', 'teacher', 'admin', 'sudo');
+    CREATE TYPE user_role AS ENUM ('generic', 'student', 'company', 'to_company', 'teacher', 'admin', 'sudo');
 EXCEPTION WHEN duplicate_object THEN null; END $$;
 
 DO $$ BEGIN

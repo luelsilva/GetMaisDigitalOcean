@@ -21,6 +21,10 @@ const authController = {
 
             // Se for empresa, já cria verificada
             const isCompany = role === 'company';
+            
+            if (role === 'to_company') {
+                role = 'company';
+            }
 
             // 2. Criar perfil
             const [user] = await db.insert(profiles)
