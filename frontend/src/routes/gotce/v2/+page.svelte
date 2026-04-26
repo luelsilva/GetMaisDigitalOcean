@@ -82,9 +82,11 @@
 		if (status === 'WAITING_APPROVAL') {
 			if (isAuthority) {
 				return {
-					line1: 'Professor, este TCE foi enviado pela empresa para sua revisão.',
-					line2: 'Se estiver tudo correto, clique em aprovar.',
+					line1:
+						'Professor, este TCE foi enviado pela empresa para sua revisão. <br> Faça as correções necessárias e clique em ATUALIZAR.',
+					line2: 'Se estiver tudo preenchido corretamente, clique em APROVAR.',
 					showSave: true,
+					showApprove: true,
 					showPdf: false,
 					statusButtons: ['DRAFT', 'APPROVED']
 				};
@@ -587,6 +589,21 @@
 		} else if (selectTurno === 'Noturno') {
 			formValues['turno'] = '(    ) M    (    ) V     ( X ) N';
 		}
+	}
+
+	async function handleApprove() {
+		const faltantes = checkMissingRequiredFields();
+
+		if (faltantes.length > 0) {
+			showToast('Existem campos obrigatórios em branco! Preencha tudo antes de aprovar.', 'error');
+			// Atualiza a lista de faltantes para exibir no modal de erro, se quiser
+			missingFieldsList = faltantes;
+			showSaveResultModal = true;
+			return;
+		}
+
+		internshipStatus = 'APPROVED';
+		await handleSave();
 	}
 
 	async function handleSave() {
@@ -1207,8 +1224,19 @@
 								{#if saving}
 									<span class="mr-2 animate-spin">🌀</span> Salvando...
 								{:else}
-									💾 {pageData.mode === 'edit' ? 'Atualizar' : 'Salvar'} Estágio
+									{pageData.mode === 'new' ? 'Salvar Estágio' : 'Atualizar Estágio'}
 								{/if}
+							</button>
+						{/if}
+
+						{#if uiState.showApprove}
+							<button
+								type="button"
+								onclick={handleApprove}
+								disabled={saving}
+								class="flex-1 rounded-xl bg-emerald-600 px-6 py-4 text-center font-bold text-white shadow-lg shadow-emerald-200 transition-all hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-emerald-300 disabled:opacity-50"
+							>
+								{saving ? 'Aprovando...' : 'Aprovar Estágio'}
 							</button>
 						{/if}
 
@@ -1418,7 +1446,6 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		text-transform: uppercase;
 	}
 	.btn-submit:hover:not(:disabled) {
 		transform: translateY(-2px);
