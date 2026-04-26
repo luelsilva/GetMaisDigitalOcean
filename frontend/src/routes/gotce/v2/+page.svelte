@@ -82,10 +82,8 @@
 		if (status === 'WAITING_APPROVAL') {
 			if (isAuthority) {
 				return {
-					line1:
-						'Professor, revise, faça as correções que se fizerem necessárias e clique em aprovar.',
-					line2:
-						'Caso não seja possível fazer as correções que se fizerem necessárias, altere o status do TCE para "editando" e envie um email a empresa para fazer as correções.',
+					line1: 'Professor, este TCE foi enviado pela empresa para sua revisão.',
+					line2: 'Se estiver tudo correto, clique em aprovar.',
 					showSave: true,
 					showPdf: false,
 					statusButtons: ['DRAFT', 'APPROVED']
@@ -851,7 +849,7 @@
 			if (res.ok) {
 				showToast('E-mail enviado ao professor com sucesso!');
 				showSaveResultModal = false;
-				
+
 				setTimeout(() => {
 					window.location.href = `/gotce/v2?id=${lastSavedId}`;
 				}, 2000);
@@ -1190,8 +1188,8 @@
 						<div
 							class="flex w-full max-w-2xl flex-col items-center gap-1 border-t border-b border-gray-100 py-4 text-center"
 						>
-							<p class="text-lg font-bold text-slate-800">{uiState.line1}</p>
-							<p class="text-lg font-bold text-slate-800">{uiState.line2}</p>
+							<p class="text-lg font-bold text-slate-800">{@html uiState.line1}</p>
+							<p class="text-lg font-bold text-slate-800">{@html uiState.line2}</p>
 						</div>
 					{/if}
 
