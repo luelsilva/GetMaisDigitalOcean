@@ -112,47 +112,44 @@ exports.getAllInternships = async (req, res, next) => {
 };
 
 // Obter estágio por ID
+// Helper para buscar estágio completo com joins
+async function getFullInternship(id) {
+    // 1. Busca o estágio
+    const [internship] = await db.select()
+        .from(internships)
+        .where(and(eq(internships.id, id), isNull(internships.deletedAt)));
+
+    if (!internship) return null;
+
+    // 2. Busca o e-mail no perfil
+    const targetId = internship.companyId || internship.userId;
+    let companyEmail = null;
+
+    if (targetId) {
+        const [profile] = await db.select({ email: profiles.email })
+            .from(profiles)
+            .where(eq(profiles.id, targetId));
+        
+        if (profile) companyEmail = profile.email;
+    }
+
+    return {
+        ...internship,
+        companyEmail
+    };
+}
+
+// Obter estágio por ID
 exports.getInternshipById = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const whereConditions = [eq(internships.id, id), isNull(internships.deletedAt)];
+        const result = await getFullInternship(id);
 
-        // Acesso liberado por ID para empresas autenticadas (Link mágico/UUID)
-        // A segurança é baseada na posse do link único
-        /*
-        if (req.user.roles === 'company') {
-            whereConditions.push(
-               eq(internships.userId, req.user.id)
-            );
-        }
-        */
-
-        const queryFields = {
-            id: internships.id,
-            userId: internships.userId,
-            companyId: internships.companyId,
-            studentRegistration: internships.studentRegistration,
-            studentName: internships.studentName,
-            courseSigla: internships.courseSigla,
-            companyName: internships.companyName,
-            startDate: internships.startDate,
-            endDate: internships.endDate,
-            jsonData: internships.jsonData,
-            createdAt: internships.createdAt,
-            updatedAt: internships.updatedAt,
-            lastModifiedBy: internships.lastModifiedBy,
-            status: internships.status,
-        };
-
-        const result = await db.select(queryFields)
-            .from(internships)
-            .where(and(...whereConditions));
-
-        if (result.length === 0) {
+        if (!result) {
             return res.status(404).json({ error: 'Estágio não encontrado' });
         }
 
-        res.json(result[0]);
+        res.json(result);
     } catch (error) {
         next(error);
     }
@@ -175,7 +172,7 @@ exports.createInternship = async (req, res, next) => {
         if (!studentName) return res.status(400).json({ error: 'Nome do aluno é obrigatório' });
         if (!courseSigla) return res.status(400).json({ error: 'Sigla do curso é obrigatória' });
 
-        const [newInternship] = await db.insert(internships).values({
+        const [inserted] = await db.insert(internships).values({
             userId: req.user.id,
             companyId: req.user.roles === 'company' ? req.user.id : null,
             studentRegistration: studentRegistration || null,
@@ -187,8 +184,9 @@ exports.createInternship = async (req, res, next) => {
             jsonData,
             status: status || 'DRAFT',
             lastModifiedBy: req.user.id
-        }).returning();
+        }).returning({ id: internships.id });
 
+        const newInternship = await getFullInternship(inserted.id);
         res.status(201).json(newInternship);
     } catch (error) {
         next(error);
@@ -258,17 +256,29 @@ exports.updateInternship = async (req, res, next) => {
         const userRole = req.user.roles;
         const isOwner = String(currentInternship.userId) === String(req.user.id);
         const isAuthority = ['teacher', 'admin', 'sudo'].includes(userRole);
+        const isLocked = ['APPROVED', 'STARTED'].includes(oldStatus);
 
         if (status !== undefined) {
             const newStatus = clean(status) || 'DRAFT';
             
-            // BLOQUEIO DE EDIÇÃO DE DADOS:
+            // BLOQUEIO TOTAL SE APROVADO/INICIADO:
+            // Se o estágio já está APROVADO ou STARTED, ninguém (nem sudo) pode mudar os DADOS (jsonData, nomes, etc).
+            // Só permitimos mudar o STATUS (ex: de STARTED para FINISHED, se houver esse status no futuro).
+            if (isLocked) {
+                const dataFieldsBeingUpdated = Object.keys(updateSet).filter(k => k !== 'status' && k !== 'updatedAt' && k !== 'lastModifiedBy');
+                if (dataFieldsBeingUpdated.length > 0) {
+                    return res.status(403).json({ 
+                        error: `Este estágio já foi ${oldStatus} e seus dados não podem mais ser modificados por ninguém.` 
+                    });
+                }
+            }
+
+            // BLOQUEIO DE EDIÇÃO PARA USUÁRIOS COMUNS:
             // Se não for autoridade e o estágio não estiver em edição (DRAFT/REVISION_REQUESTED),
             // permitir APENAS a mudança de status (ex: cancelar submissão voltando para DRAFT)
-            // mas NÃO a mudança de dados do formulário (jsonData, etc)
             const isEditableState = ['DRAFT', 'REVISION_REQUESTED'].includes(oldStatus);
             
-            if (!isAuthority && !isEditableState) {
+            if (!isAuthority && !isEditableState && !isLocked) {
                 // Se tentou mudar qualquer campo que não seja 'status'
                 const fieldsBeingUpdated = Object.keys(updateSet).filter(k => k !== 'status' && k !== 'updatedAt' && k !== 'lastModifiedBy');
                 if (fieldsBeingUpdated.length > 0) {
@@ -319,15 +329,17 @@ exports.updateInternship = async (req, res, next) => {
         const whereConditions = [eq(internships.id, id), isNull(internships.deletedAt)];
 
         // O Select inicial já foi feito para validação de status, mas mantemos o filtro de deletedAt aqui no update final por segurança
-        const [updatedInternship] = await db.update(internships)
+        const [updated] = await db.update(internships)
             .set(updateSet)
             .where(and(...whereConditions))
-            .returning();
+            .returning({ id: internships.id });
 
-        if (!updatedInternship) {
+        if (!updated) {
             return res.status(404).json({ error: 'Estágio não encontrado ou não atualizado' });
         }
 
+        const updatedInternship = await getFullInternship(id);
+        
         // DISPARO DE E-MAILS (Gatilho: Submissão para Aprovação)
         if (updateSet.status === 'WAITING_APPROVAL' && oldStatus !== 'WAITING_APPROVAL') {
             const studentName = updatedInternship.studentName;
@@ -519,6 +531,61 @@ exports.notifyTeacherConference = async (req, res, next) => {
     } catch (error) {
         console.error('[NOTIFY ERROR]', error);
         res.status(500).json({ error: 'Falha ao enviar e-mail' });
+    }
+};
+
+// Notificar Empresa sobre Aprovação
+exports.notifyCompanyApproval = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+
+        const [internship] = await db.select()
+            .from(internships)
+            .where(eq(internships.id, id));
+
+        if (!internship) {
+            return res.status(404).json({ error: 'Estágio não encontrado' });
+        }
+
+        const studentName = internship.studentName;
+        // Prioridade: buscar e-mail oficial da tabela profiles vinculado ao company_id (ou user_id)
+        const targetId = internship.companyId || internship.userId;
+        const [companyProfile] = await db.select({ email: profiles.email })
+            .from(profiles)
+            .where(eq(profiles.id, targetId));
+
+        let companyEmail = companyProfile?.email;
+
+        // Fallback: se não achar no perfil, tenta o campo do formulário
+        if (!companyEmail) {
+            companyEmail = internship.jsonData?.email_concedente || internship.jsonData?.EmailConcedente;
+        }
+
+        if (!companyEmail || !companyEmail.includes('@')) {
+            return res.status(400).json({ error: 'E-mail da empresa não encontrado ou inválido para este registro' });
+        }
+
+        const baseUrl = config.corsOrigin[0] || 'http://localhost:5173';
+        const link = `${baseUrl}/gotce/v2?id=${id}`;
+
+        const resEmail = await emailService.sendTCEApprovedToCompany(companyEmail, studentName, link);
+
+        if (resEmail?.data?.id) {
+            await db.insert(emailLogs).values({
+                resendId: resEmail.data.id,
+                type: 'other',
+                toEmail: companyEmail,
+                subject: `✅ TCE Aprovado: ${studentName}`,
+                status: 'sent',
+                internshipId: id,
+                sentBy: req.user.id
+            });
+        }
+
+        res.json({ message: 'E-mail de aprovação enviado com sucesso à empresa' });
+    } catch (error) {
+        console.error('[NOTIFY ERROR]', error);
+        res.status(500).json({ error: 'Falha ao enviar e-mail de aprovação' });
     }
 };
 

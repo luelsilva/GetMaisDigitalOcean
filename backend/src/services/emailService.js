@@ -138,6 +138,31 @@ const emailService = {
             console.error('[EMAIL SERVICE] Erro ao enviar para professor:', err);
             return { success: false, error: err };
         }
+    },
+
+    /**
+     * Notifica a empresa que o TCE foi aprovado.
+     */
+    sendTCEApprovedToCompany: async (to, studentName, link) => {
+        try {
+            const html = emailService._renderTemplate('tce_approved', {
+                studentName,
+                link,
+                year: new Date().getFullYear()
+            });
+
+            if (!html) throw new Error('Não foi possível carregar o template tce_approved');
+
+            return await resend.emails.send({
+                from: config.resend.from,
+                to: to,
+                subject: `✅ TCE Aprovado: ${studentName}`,
+                html: html
+            });
+        } catch (err) {
+            console.error('[EMAIL SERVICE] Erro ao enviar aprovação para empresa:', err);
+            return { success: false, error: err };
+        }
     }
 };
 

@@ -31,6 +31,7 @@
 	let isAuthority = $derived(
 		['teacher', 'admin', 'sudo'].includes($user?.roles || $user?.role || '')
 	);
+	const isLocked = $derived(['APPROVED', 'STARTED'].includes(internshipStatus));
 
 	// Status confirmation variables
 	let showStatusModal = $state(false);
@@ -44,6 +45,7 @@
 	let missingFieldsList = $state<string[]>([]);
 	let sendingEmail = $state(false);
 	let lastSavedId = $state('');
+	let companyEmail = $state('');
 
 	// Derivados para o modal de salvamento
 	const saveModalUserRole = $derived(($user?.roles || $user?.role || '').toString().toLowerCase());
@@ -53,6 +55,18 @@
 	const isCompanyWithProfessor = $derived(
 		saveModalUserRole === 'company' && saveModalProfessor.trim() !== ''
 	);
+	const saveModalCompanyEmail = $derived(
+		companyEmail || formValues['email_concedente'] || formValues['EmailConcedente'] || ''
+	);
+
+	$effect(() => {
+		console.log('📧 [DEBUG EMAIL]:', {
+			state: companyEmail,
+			form1: formValues['email_concedente'],
+			form2: formValues['EmailConcedente'],
+			final: saveModalCompanyEmail
+		});
+	});
 
 	const uiState = $derived.by(() => {
 		const role = ($user?.roles || $user?.role || '').toString().toLowerCase();
@@ -103,20 +117,20 @@
 		if (status === 'APPROVED') {
 			return {
 				line1: 'Este documento foi revisado e aprovado pelo professor.',
-				line2: 'Você pode agora gerar os PDFs, imprimir em 3 vias e colher as assinaturas.',
+				line2: 'Os dados estão bloqueados para edição.',
 				showSave: false,
 				showPdf: true,
-				statusButtons: isAuthority ? ['DRAFT', 'WAITING_APPROVAL', 'APPROVED', 'STARTED'] : []
+				statusButtons: isAuthority ? ['APPROVED', 'STARTED'] : []
 			};
 		}
 
 		if (status === 'STARTED') {
 			return {
 				line1: 'Este documento já foi assinado e registrado.',
-				line2: 'O aluno já iniciou o estágio.',
+				line2: 'O estágio está em andamento (INICIADO).',
 				showSave: false,
-				showPdf: false,
-				statusButtons: isAuthority ? ['DRAFT', 'WAITING_APPROVAL', 'APPROVED', 'STARTED'] : []
+				showPdf: true,
+				statusButtons: isAuthority ? ['STARTED'] : []
 			};
 		}
 
@@ -125,7 +139,7 @@
 			line2: '',
 			showSave: false,
 			showPdf: false,
-			statusButtons: isAuthority ? ['DRAFT', 'WAITING_APPROVAL', 'APPROVED', 'STARTED'] : []
+			statusButtons: []
 		};
 	});
 
@@ -188,6 +202,7 @@
 		// Se estiver em modo de edição, preenche o formulário com os dados do estágio
 		if (pageData.mode === 'edit' && pageData.internship) {
 			internshipStatus = pageData.internship.status || 'DRAFT';
+			companyEmail = pageData.internship.companyEmail || '';
 			if (pageData.internship.jsonData) {
 				formValues = {
 					...formValues,
@@ -591,19 +606,49 @@
 		}
 	}
 
-	async function handleApprove() {
-		const faltantes = checkMissingRequiredFields();
+	async function updateStatus(newStatus: string) {
+		const statusLabels: Record<string, string> = {
+			DRAFT: 'Editando',
+			WAITING_APPROVAL: 'Aguardando Aprovação',
+			APPROVED: 'Aprovado',
+			STARTED: 'Estagiando'
+		};
 
-		if (faltantes.length > 0) {
-			showToast('Existem campos obrigatórios em branco! Preencha tudo antes de aprovar.', 'error');
-			// Atualiza a lista de faltantes para exibir no modal de erro, se quiser
-			missingFieldsList = faltantes;
-			showSaveResultModal = true;
+		if (
+			!confirm(`Deseja realmente mudar o status para "${statusLabels[newStatus] || newStatus}"?`)
+		) {
 			return;
 		}
 
-		internshipStatus = 'APPROVED';
-		await handleSave();
+		try {
+			saving = true;
+			const response = await apiFetch(`/internships/${pageData.internship.id}`, {
+				method: 'PUT',
+				body: JSON.stringify({ status: newStatus })
+			});
+
+			if (response.ok) {
+				const updated = await response.json();
+				internshipStatus = updated.status;
+				showToast('Status atualizado com sucesso!', 'success');
+				// Recarrega a página ou atualiza o estado local se necessário
+				if (typeof window !== 'undefined') {
+					window.location.reload(); // Recarrega para garantir que todos os bloqueios de UI sejam aplicados
+				}
+			} else {
+				const err = await response.json();
+				showToast('Erro ao atualizar status: ' + (err.error || 'Erro desconhecido'), 'error');
+			}
+		} catch (err) {
+			console.error('Erro ao atualizar status:', err);
+			showToast('Falha na comunicação com o servidor', 'error');
+		} finally {
+			saving = false;
+		}
+	}
+
+	async function handleApprove() {
+		await updateStatus('APPROVED');
 	}
 
 	async function handleSave() {
@@ -677,6 +722,7 @@
 				formModified = false;
 				const savedData = await response.json();
 				lastSavedId = savedData.id;
+				companyEmail = savedData.companyEmail || '';
 
 				console.log('🔍 [DEBUG ROLE CHECK]:', {
 					user: $user,
@@ -882,6 +928,35 @@
 		}
 	}
 
+	async function handleNotifyCompanyApproval() {
+		sendingEmail = true;
+		try {
+			const res = await apiFetch(
+				`/internships/${lastSavedId || pageData.internship?.id}/notificar-aprovacao`,
+				{
+					method: 'POST'
+				}
+			);
+
+			if (res.ok) {
+				showToast('E-mail de aprovação enviado à empresa com sucesso!');
+				showSaveResultModal = false;
+				// Redireciona para atualizar o estado da página (para modo PDF)
+				setTimeout(() => {
+					window.location.href = `/gotce/v2?id=${lastSavedId || pageData.internship?.id}`;
+				}, 2000);
+			} else {
+				const err = await res.json();
+				showToast('Erro ao notificar empresa: ' + (err.error || 'Erro desconhecido'), 'error');
+			}
+		} catch (err) {
+			console.error(err);
+			showToast('Erro de conexão ao enviar e-mail', 'error');
+		} finally {
+			sendingEmail = false;
+		}
+	}
+
 	function handleCloseModal() {
 		showSaveResultModal = false;
 		showSavedModal = false;
@@ -958,7 +1033,46 @@
 
 		<!-- Botões contextuais -->
 		<div class="flex flex-col gap-3">
-			{#if isCompanyWithProfessor}
+			{#if internshipStatus === 'APPROVED'}
+				<div class="mb-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm">
+					<p class="font-bold text-emerald-800">✅ O que deseja fazer agora?</p>
+					<p class="mt-1 text-xs text-emerald-700">O documento foi aprovado. Escolha uma opção:</p>
+
+					{#if saveModalCompanyEmail}
+						<div class="mt-3 border-t border-emerald-200 pt-2">
+							<span class="text-[10px] font-black tracking-wider text-emerald-600 uppercase"
+								>E-mail da Empresa</span
+							>
+							<p class="text-xs font-bold text-emerald-900">{saveModalCompanyEmail}</p>
+						</div>
+					{:else}
+						<div class="mt-3 border-t border-emerald-200 pt-2 text-center">
+							<p class="text-xs font-bold text-red-500 italic">
+								⚠️ E-mail de notificação não localizado.
+							</p>
+							<p class="text-[10px] text-red-400">Verifique os dados da empresa no cadastro.</p>
+						</div>
+					{/if}
+				</div>
+				<button
+					onclick={handleNotifyCompanyApproval}
+					disabled={sendingEmail}
+					class="btn-action w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50"
+				>
+					{#if sendingEmail}
+						<span class="mr-2 animate-spin">🌀</span> Enviando...
+					{:else}
+						📧 Notificar Empresa e solicitar assinaturas
+					{/if}
+				</button>
+				<button
+					onclick={handleCloseModal}
+					disabled={sendingEmail}
+					class="btn-action w-full border-2 border-slate-200 bg-transparent! text-slate-600! hover:bg-slate-50 disabled:opacity-50"
+				>
+					Vou imprimir os PDFs eu mesmo
+				</button>
+			{:else if isCompanyWithProfessor}
 				<!-- Company COM professor: duas opções -->
 				<div class="mb-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm">
 					<span class="text-xs font-bold tracking-wider text-slate-400 uppercase"
@@ -1120,6 +1234,7 @@
 																maxlength={col.totalChar || undefined}
 																bind:value={formValues[inputId]}
 																required={col.required !== false}
+																disabled={isLocked}
 																onchange={markAsModified}
 																onkeydown={col.nRows
 																	? (e) => handleTextareaKeydown(e, col.nRows)
@@ -1134,6 +1249,7 @@
 																class="col-input"
 																bind:value={formValues[inputId]}
 																required={col.required !== false}
+																disabled={isLocked}
 																onchange={markAsModified}
 															>
 																<option value="" disabled selected>Selecione...</option>
@@ -1159,6 +1275,7 @@
 																required={col.required !== false}
 																maxlength="9"
 																placeholder="00000-000"
+																disabled={isLocked}
 																onchange={markAsModified}
 																onblur={(e) => handleCepLookup(inputId, e.currentTarget.value)}
 															/>
@@ -1170,6 +1287,7 @@
 																	class="col-input"
 																	bind:value={formValues[inputId]}
 																	required={col.required !== false}
+																	disabled={isLocked}
 																	onchange={markAsModified}
 																	onkeydown={inputType === 'number'
 																		? handleNumericKeydown
@@ -1181,7 +1299,8 @@
 																	<button
 																		type="button"
 																		onclick={() => suggestEndDate(inputId)}
-																		class="ml-1 text-xl transition-transform hover:scale-110 active:scale-95"
+																		disabled={isLocked}
+																		class="ml-1 text-xl transition-transform hover:scale-110 active:scale-95 disabled:opacity-30"
 																		title="Sugerir data final baseada em dias úteis"
 																	>
 																		💡
@@ -1207,6 +1326,29 @@
 						>
 							<p class="text-lg font-bold text-slate-800">{@html uiState.line1}</p>
 							<p class="text-lg font-bold text-slate-800">{@html uiState.line2}</p>
+						</div>
+					{/if}
+
+					{#if uiState.statusButtons.length > 0}
+						<div class="mb-4 flex w-full flex-wrap justify-center gap-2 border-b border-gray-100 pb-4">
+							{#if uiState.statusButtons.includes('DRAFT')}
+								<button
+									type="button"
+									onclick={() => updateStatus('DRAFT')}
+									class="rounded-xl bg-amber-100 px-6 py-3 text-sm font-bold text-amber-700 transition-all hover:bg-amber-200"
+								>
+									↩️ Voltar para Edição
+								</button>
+							{/if}
+							{#if uiState.statusButtons.includes('STARTED') && internshipStatus !== 'STARTED'}
+								<button
+									type="button"
+									onclick={() => updateStatus('STARTED')}
+									class="rounded-xl bg-indigo-600 px-8 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-100 transition-all hover:-translate-y-0.5 hover:bg-indigo-700 hover:shadow-indigo-200"
+								>
+									🚀 Marcar como Estágio Iniciado
+								</button>
+							{/if}
 						</div>
 					{/if}
 
