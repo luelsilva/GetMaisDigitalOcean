@@ -8,6 +8,12 @@ const userRolesEnum = pgEnum('user_role', ['generic', 'student', 'company', 'tea
 
 const internshipStatusEnum = pgEnum('internship_status', ['DRAFT', 'WAITING_APPROVAL', 'REVISION_REQUESTED', 'APPROVED', 'STARTED']);
 
+// Enum para status de e-mail (Resend)
+const emailStatusEnum = pgEnum('email_status', ['sent', 'delivered', 'opened', 'clicked', 'bounced', 'complained', 'failed']);
+
+// Enum para tipo de e-mail
+const emailTypeEnum = pgEnum('email_type', ['notify_professor', 'otp_registration', 'otp_password_reset', 'other']);
+
 // Tabela de perfis de usuários
 const profiles = pgTable('profiles', {
     id: uuid('id').primaryKey().defaultRandom(),
@@ -137,6 +143,22 @@ const appSettings = pgTable('app_settings', {
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 });
 
+// Tabela de log de e-mails enviados pelo Resend
+const emailLogs = pgTable('email_logs', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    resendId: varchar('resend_id', { length: 100 }).unique(),       // ID retornado pelo Resend
+    type: emailTypeEnum('type').notNull().default('other'),          // Tipo do e-mail
+    toEmail: text('to_email').notNull(),                             // Destinatário
+    subject: text('subject').notNull(),                              // Assunto
+    status: emailStatusEnum('status').notNull().default('sent'),     // Último status
+    internshipId: uuid('internship_id').references(() => internships.id, { onDelete: 'set null' }),
+    sentBy: uuid('sent_by').references(() => profiles.id, { onDelete: 'set null' }),
+    events: jsonb('events').notNull().default([]),                   // Histórico de eventos do webhook
+    lastEventAt: timestamp('last_event_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});
+
 module.exports = {
     profiles,
     otpCodes,
@@ -149,5 +171,6 @@ module.exports = {
     formModels,
     internships,
     keepAlive,
-    appSettings
+    appSettings,
+    emailLogs
 };

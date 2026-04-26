@@ -36,6 +36,14 @@ DO $$ BEGIN
     CREATE TYPE internship_status AS ENUM ('DRAFT', 'WAITING_APPROVAL', 'REVISION_REQUESTED', 'APPROVED', 'STARTED');
 EXCEPTION WHEN duplicate_object THEN null; END $$;
 
+DO $$ BEGIN
+    CREATE TYPE email_status AS ENUM ('sent', 'delivered', 'opened', 'clicked', 'bounced', 'complained', 'failed');
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+DO $$ BEGIN
+    CREATE TYPE email_type AS ENUM ('notify_professor', 'otp_registration', 'otp_password_reset', 'other');
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+
 
 -- ============================================
 -- TABELA: keep_alive
@@ -439,3 +447,40 @@ COMMENT ON TABLE app_settings IS 'Tabela de configurações globais e Feature Fl
 INSERT INTO app_settings (key, value) 
 VALUES ('feature_flags', '{"use_tce_v2": false}')
 ON CONFLICT (key) DO NOTHING;
+
+
+-- ============================================
+-- TABELA DE LOG DE EMAILS (Resend)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS "email_logs" (
+    "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    "resend_id" VARCHAR(100) UNIQUE,              -- ID retornado pelo Resend (para correlacionar webhooks)
+    "type" email_type NOT NULL DEFAULT 'other',    -- Tipo do e-mail enviado
+    "to_email" TEXT NOT NULL,                      -- Destinatário
+    "subject" TEXT NOT NULL,                       -- Assunto do e-mail
+    "status" email_status NOT NULL DEFAULT 'sent', -- Último status conhecido
+    "internship_id" UUID REFERENCES internships(id) ON DELETE SET NULL, -- Vinculado a um estágio (opcional)
+    "sent_by" UUID REFERENCES profiles(id) ON DELETE SET NULL,           -- Quem disparou o e-mail
+    "events" JSONB DEFAULT '[]'::jsonb NOT NULL,   -- Histórico completo de eventos recebidos via webhook
+    "last_event_at" TIMESTAMPTZ,                   -- Data/hora do último evento recebido
+    "created_at" TIMESTAMPTZ DEFAULT now() NOT NULL,
+    "updated_at" TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+ALTER TABLE email_logs ENABLE ROW LEVEL SECURITY;
+
+CREATE INDEX IF NOT EXISTS idx_email_logs_resend_id ON "email_logs"("resend_id");
+CREATE INDEX IF NOT EXISTS idx_email_logs_internship_id ON "email_logs"("internship_id");
+CREATE INDEX IF NOT EXISTS idx_email_logs_sent_by ON "email_logs"("sent_by");
+CREATE INDEX IF NOT EXISTS idx_email_logs_status ON "email_logs"("status");
+CREATE INDEX IF NOT EXISTS idx_email_logs_type ON "email_logs"("type");
+
+DROP TRIGGER IF EXISTS email_logs_updated_at_trigger ON email_logs;
+CREATE TRIGGER email_logs_updated_at_trigger
+    BEFORE UPDATE ON email_logs
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+COMMENT ON TABLE email_logs IS 'Registro de todos os e-mails enviados pelo Resend, com histórico de status via webhooks';
+COMMENT ON COLUMN email_logs.resend_id IS 'ID retornado pela API do Resend, usado para correlacionar eventos de webhook';
+COMMENT ON COLUMN email_logs.events IS 'Array JSONB com o histórico cronológico de todos os eventos recebidos do Resend';
