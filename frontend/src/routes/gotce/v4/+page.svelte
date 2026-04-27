@@ -17,6 +17,50 @@
 
 	let { data: pageData }: Props = $props();
 	let form = $derived(pageData.form);
+
+	let pageConfig = $derived.by(() => {
+		const { mode, internship_status, user_role } = pageData;
+
+		let config = {
+			message: '',
+			canSave: true,
+			canPDF: true,
+			saveLabel: mode === 'new' ? 'Salvar Estágio' : 'Atualizar Estágio',
+		};
+
+		if (mode === 'new') {
+			config.canPDF = false; // Somente o botão Salvar Estágio deve aparecer no modo criação
+			config.message = `
+				<p class="text-lg font-bold text-slate-800">Este documento está no modo de CRIAÇÃO.</p>
+				<p class="text-lg font-bold text-slate-800">Após preencher os campos clique em salvar estágio.</p>
+			`;
+			return config;
+		}
+
+		// Mensagens padrão para modo de edição
+		let title = 'Este documento está no modo de EDIÇÃO.';
+		let subtitle = 'Após editar os campos clique em atualizar estágio.';
+
+		// Customização baseada em status
+		if (internship_status === 'FINISHED') {
+			title = 'Este estágio está <span class="text-emerald-600">FINALIZADO</span>.';
+			subtitle = 'O documento não pode mais ser alterado.';
+			config.canSave = false;
+		} else if (internship_status === 'APPROVED') {
+			title = 'Este estágio está <span class="text-indigo-600">APROVADO</span>.';
+		} else if (internship_status === 'WAITING_APPROVAL') {
+			title = 'Este estágio está <span class="text-amber-600">AGUARDANDO APROVAÇÃO</span>.';
+		}
+
+
+
+		config.message = `
+			<p class="text-lg font-bold text-slate-800">${title}</p>
+			<p class="text-lg font-bold text-slate-800">${subtitle}</p>
+		`;
+
+		return config;
+	});
 	let formValues = $state<Record<string, any>>({});
 	let submitting = $state(false);
 	let successLink = $state('');
@@ -454,10 +498,12 @@
 	async function handleSave() {
 		syncTurno();
 		await checkInternshipPeriod();
-		if (!formValues['nome_aluno']) {
+		if (!formValues['nome_aluno'] && !formValues['NomeAluno']) {
+			alert('Por favor, preencha o Nome do Aluno antes de salvar.');
 			return;
 		}
-		if (!formValues['nome_curso']) {
+		if (!formValues['nome_curso'] && !formValues['NomeCurso'] && !formValues['sigla_curso']) {
+			alert('Por favor, selecione o Curso antes de salvar.');
 			return;
 		}
 
@@ -750,6 +796,7 @@
 																style="min-height: {col.nRows ? col.nRows * 1.6 + 'rem' : '6rem'}"
 																rows={col.nRows || undefined}
 																maxlength={col.totalChar || undefined}
+																required={col.required}
 																bind:value={formValues[inputId]}
 																onchange={markAsModified}
 																onkeydown={col.nRows
@@ -763,6 +810,7 @@
 															<select
 																id={inputId}
 																class="col-input"
+																required={col.required}
 																bind:value={formValues[inputId]}
 																onchange={markAsModified}
 															>
@@ -784,6 +832,7 @@
 																id={inputId}
 																type="text"
 																class="col-input"
+																required={col.required}
 																bind:value={formValues[inputId]}
 																maxlength="9"
 																placeholder="00000-000"
@@ -796,6 +845,7 @@
 																	id={inputId}
 																	type={inputType}
 																	class="col-input"
+																	required={col.required}
 																	bind:value={formValues[inputId]}
 																	onchange={markAsModified}
 																	onkeydown={inputType === 'number'
@@ -831,63 +881,42 @@
 					<div
 						class="flex w-full max-w-2xl flex-col items-center gap-1 border-t border-b border-gray-100 py-4 text-center"
 					>
-						<p class="text-lg font-bold text-slate-800">
-							{pageData.mode === 'new'
-								? 'Este documento está no modo de CRIAÇÃO.'
-								: 'Este documento está no modo de EDIÇÃO.'}
-						</p>
-						<p class="text-lg font-bold text-slate-800">
-							{pageData.mode === 'new'
-								? 'Após preencher os campos clique em salvar estágio.'
-								: 'Após editar os campos clique em atualizar estágio.'}
-						</p>
+						{@html pageConfig.message}
 					</div>
 
 					<div class="flex w-full max-w-2xl flex-col gap-4 sm:flex-row">
-						<button
-							type="button"
-							onclick={handleSave}
-							disabled={!formModified || saving}
-							class="btn-submit flex-1"
-							style="background-color: {form.tituloColor}; opacity: {!formModified || saving
-								? 0.5
-								: 1}; cursor: {!formModified || saving ? 'not-allowed' : 'pointer'};"
-						>
-							{#if saving}
-								<span class="mr-2 animate-spin">🌀</span> Salvando...
-							{:else}
-								💾 {pageData.mode === 'new' ? 'Salvar Estágio' : 'Atualizar Estágio'}
-							{/if}
-						</button>
+						{#if pageConfig.canSave}
+							<button
+								type="button"
+								onclick={handleSave}
+								disabled={!formModified || saving}
+								class="btn-submit flex-1"
+								style="background-color: {form.tituloColor}; opacity: {!formModified || saving
+									? 0.5
+									: 1}; cursor: {!formModified || saving ? 'not-allowed' : 'pointer'};"
+							>
+								{#if saving}
+									<span class="mr-2 animate-spin">🌀</span> Salvando...
+								{:else}
+									💾 {pageConfig.saveLabel}
+								{/if}
+							</button>
+						{/if}
 
-						<button
-							type="submit"
-							disabled={submitting}
-							class="btn-submit flex-1"
-							style="background-color: #dc2626"
-						>
-							{#if submitting}
-								<span class="mr-2 animate-spin">🌀</span> Processando...
-							{:else}
-								📕 Gerar PDF
-							{/if}
-						</button>
-
-						<!-- 
-						<button
-							type="button"
-                            onclick={() => handleSubmit('docx')}
-							disabled={submitting}
-							class="btn-submit flex-1"
-							style="background-color: #2b579a"
-						>
-							{#if submitting}
-								<span class="mr-2 animate-spin">🌀</span> Processando...
-							{:else}
-								📘 Gerar Word
-							{/if}
-						</button>
-						-->
+						{#if pageConfig.canPDF}
+							<button
+								type="submit"
+								disabled={submitting}
+								class="btn-submit flex-1"
+								style="background-color: #dc2626"
+							>
+								{#if submitting}
+									<span class="mr-2 animate-spin">🌀</span> Processando...
+								{:else}
+									📕 Gerar PDF
+								{/if}
+							</button>
+						{/if}
 					</div>
 					{#if successLink}
 						<div
