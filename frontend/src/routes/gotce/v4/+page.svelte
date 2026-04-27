@@ -25,6 +25,7 @@
 			message: '',
 			canSave: true,
 			canPDF: true,
+			canSubmitForApproval: mode === 'edit' && internship_status === 'DRAFT',
 			saveLabel: mode === 'new' ? 'Salvar Estágio' : 'Atualizar Estágio',
 		};
 
@@ -537,7 +538,7 @@
 					formValues['dt_fim'] || formValues['data_final'] || formValues['DataFinal']
 				),
 				jsonData: formValues,
-				status: 'DRAFT'
+				status: pageData.mode === 'edit' ? pageData.internship_status : 'DRAFT'
 			};
 
 			// Converter matrícula para número se existir
@@ -700,6 +701,44 @@
 			}
 		} catch (err) {
 			console.error(err);
+		} finally {
+			submitting = false;
+		}
+	}
+
+	async function handleSendForApproval() {
+		if (
+			!confirm(
+				'Deseja enviar este estágio para avaliação do professor? Após o envio, você não poderá editá-lo até que seja revisado.'
+			)
+		)
+			return;
+
+		// Salva os dados atuais primeiro
+		const saved = await handleSave(true);
+		if (!saved) return;
+
+		submitting = true;
+		try {
+			const response = await apiFetch(`/internships/${pageData.internship.id}`, {
+				method: 'PUT',
+				body: JSON.stringify({
+					...pageData.internship,
+					jsonData: formValues,
+					status: 'WAITING_APPROVAL'
+				})
+			});
+
+			if (response.ok) {
+				alert('Enviado para avaliação com sucesso!');
+				window.location.reload();
+			} else {
+				const err = await response.json();
+				alert('Erro ao enviar para avaliação: ' + (err.message || 'Erro desconhecido'));
+			}
+		} catch (err) {
+			console.error(err);
+			alert('Erro de conexão ao enviar para avaliação.');
 		} finally {
 			submitting = false;
 		}
@@ -905,6 +944,22 @@
 									<span class="mr-2 animate-spin">🌀</span> Salvando...
 								{:else}
 									💾 {pageConfig.saveLabel}
+								{/if}
+							</button>
+						{/if}
+
+						{#if pageConfig.canSubmitForApproval}
+							<button
+								type="button"
+								onclick={handleSendForApproval}
+								disabled={submitting || saving}
+								class="btn-submit flex-1"
+								style="background-color: #f59e0b"
+							>
+								{#if submitting}
+									<span class="mr-2 animate-spin">🌀</span> Enviando...
+								{:else}
+									📤 Enviar para o professor avaliar
 								{/if}
 							</button>
 						{/if}
