@@ -495,16 +495,16 @@
 		}
 	}
 
-	async function handleSave() {
+	async function handleSave(silent = false) {
 		syncTurno();
 		await checkInternshipPeriod();
 		if (!formValues['nome_aluno'] && !formValues['NomeAluno']) {
 			alert('Por favor, preencha o Nome do Aluno antes de salvar.');
-			return;
+			return false;
 		}
 		if (!formValues['nome_curso'] && !formValues['NomeCurso'] && !formValues['sigla_curso']) {
 			alert('Por favor, selecione o Curso antes de salvar.');
-			return;
+			return false;
 		}
 
 		saving = true;
@@ -565,21 +565,27 @@
 				const savedData = await response.json();
 				lastSavedId = savedData.id;
 
-				showSaveResultModal = true;
+				if (!silent) {
+					showSaveResultModal = true;
+				}
+				return true;
 			} else {
 				const err = await response.json();
 				console.error('Erro ao salvar:', err);
+				return false;
 			}
 		} catch (err) {
 			console.error(err);
+			return false;
 		} finally {
 			saving = false;
 		}
 	}
 
 	async function handleSubmit(type = 'pdf') {
-		syncTurno();
-		await checkInternshipPeriod();
+		// Salva automaticamente antes de gerar o documento
+		const saved = await handleSave(true);
+		if (!saved) return;
 
 		if (type === 'pdf') {
 			const now = new Date();
