@@ -10,6 +10,8 @@
 			teachers: any[];
 			internship: any | null;
 			mode: 'new' | 'edit';
+			internship_status: string;
+			user_role: string;
 		};
 	}
 
