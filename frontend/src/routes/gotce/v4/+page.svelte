@@ -771,6 +771,25 @@
 			});
 
 			if (response.ok) {
+				// Notificar professor por e-mail automaticamente
+				const profName = formValues['nome_professor'] || formValues['NomeProfessor'];
+				const profEmail = formValues['email_professor'] || formValues['EmailProfessor'];
+
+				if (profEmail) {
+					try {
+						await apiFetch(`/internships/${pageData.internship.id}/notificar-professor`, {
+							method: 'POST',
+							body: JSON.stringify({
+								teacherName: profName,
+								teacherEmail: profEmail
+							})
+						});
+					} catch (e) {
+						console.error('Erro ao enviar e-mail de notificação:', e);
+						// Prosseguimos mesmo se o e-mail falhar, pois o status já foi alterado
+					}
+				}
+
 				alert('Enviado para avaliação com sucesso!');
 				window.location.reload();
 			} else {
