@@ -1,11 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { apiFetch } from '$lib/api';
-	import { user } from '$lib/stores/auth';
 	import { fade } from 'svelte/transition';
-	import { devNotes } from '$lib/stores/devNotes.svelte';
 	import Modal from '$lib/components/Modal.svelte';
-
 	interface Props {
 		data: {
 			form: any;
@@ -21,188 +18,34 @@
 	let formValues = $state<Record<string, any>>({});
 	let submitting = $state(false);
 	let successLink = $state('');
-	let successLinkDocx = $state('');
 
 	let saving = $state(false);
-	let saveSuccess = $state(false);
 	let formModified = $state(false);
 
-	let internshipStatus = $state('DRAFT');
-	let isAuthority = $derived(
-		['teacher', 'admin', 'sudo'].includes($user?.roles || $user?.role || '')
-	);
-	const isLocked = $derived(['APPROVED', 'STARTED'].includes(internshipStatus));
 
-	// Status confirmation variables
-	let showStatusModal = $state(false);
-	let pendingStatus = $state('');
 
-	let toastMessage = $state('');
-	let toastType = $state<'success' | 'error' | 'warning'>('success');
-
-	let showSavedModal = $state(false);
 	let showSaveResultModal = $state(false);
-	let missingFieldsList = $state<string[]>([]);
-	let sendingEmail = $state(false);
 	let lastSavedId = $state('');
-	let companyEmail = $state('');
 
-	// Derivados para o modal de salvamento
-	const saveModalUserRole = $derived(($user?.roles || $user?.role || '').toString().toLowerCase());
-	const saveModalProfessor = $derived(
-		formValues['nome_professor'] || formValues['NomeProfessor'] || ''
-	);
-	const isCompanyWithProfessor = $derived(
-		saveModalUserRole === 'company' && saveModalProfessor.trim() !== ''
-	);
-	const saveModalCompanyEmail = $derived(
-		companyEmail || formValues['email_concedente'] || formValues['EmailConcedente'] || ''
-	);
 
-	$effect(() => {
-		console.log('📧 [DEBUG EMAIL]:', {
-			state: companyEmail,
-			form1: formValues['email_concedente'],
-			form2: formValues['EmailConcedente'],
-			final: saveModalCompanyEmail
-		});
-	});
 
-	const uiState = $derived.by(() => {
-		const role = ($user?.roles || $user?.role || '').toString().toLowerCase();
-		const status = internshipStatus;
-		const isNew = pageData.mode === 'new';
 
-		if (isNew) {
-			return {
-				line1: 'Este documento está no modo de CRIAÇÃO.',
-				line2: 'Após preencher os campos clique em salvar estágio.',
-				showSave: true,
-				showPdf: false,
-				statusButtons: []
-			};
-		}
 
-		if (status === 'DRAFT') {
-			return {
-				line1: 'Este documento está no modo de EDIÇÃO.',
-				line2: 'Após editar os campos clique em atualizar estágio.',
-				showSave: true,
-				showPdf: false,
-				statusButtons: isAuthority ? ['DRAFT', 'WAITING_APPROVAL', 'APPROVED', 'STARTED'] : []
-			};
-		}
 
-		if (status === 'WAITING_APPROVAL') {
-			if (isAuthority) {
-				return {
-					line1:
-						'Professor, este TCE foi enviado pela empresa para sua revisão. <br> Faça as correções necessárias e clique em ATUALIZAR.',
-					line2: 'Se estiver tudo preenchido corretamente, clique em APROVAR.',
-					showSave: true,
-					showApprove: true,
-					showPdf: false,
-					statusButtons: ['DRAFT', 'APPROVED']
-				};
-			}
-			return {
-				line1: 'Este documento está aguardando revisão e aprovação do professor',
-				line2: 'e não poderá ser modificado.',
-				showSave: false,
-				showPdf: false,
-				statusButtons: []
-			};
-		}
 
-		if (status === 'APPROVED') {
-			return {
-				line1: 'Este documento foi revisado e aprovado pelo professor.',
-				line2: 'Os dados estão bloqueados para edição.',
-				showSave: false,
-				showPdf: true,
-				statusButtons: isAuthority ? ['APPROVED', 'STARTED'] : []
-			};
-		}
 
-		if (status === 'STARTED') {
-			return {
-				line1: 'Este documento já foi assinado e registrado.',
-				line2: 'O estágio está em andamento (INICIADO).',
-				showSave: false,
-				showPdf: true,
-				statusButtons: isAuthority ? ['STARTED'] : []
-			};
-		}
-
-		return {
-			line1: '',
-			line2: '',
-			showSave: false,
-			showPdf: false,
-			statusButtons: []
-		};
-	});
-
-	function showToast(message: string, type: 'success' | 'error' | 'warning' = 'success') {
-		toastMessage = message;
-		toastType = type;
-		// Mensagens de erro ou aviso ficam por mais tempo
-		const duration = type === 'success' ? 3000 : 6000;
-		setTimeout(() => {
-			if (toastMessage === message) {
-				toastMessage = '';
-			}
-		}, duration);
-	}
-
-	function checkMissingRequiredFields() {
-		const missing: string[] = [];
-		if (form?.secoes) {
-			form.secoes.forEach((secao: any) => {
-				secao.rows.forEach((row: any) => {
-					row.cols.forEach((col: any) => {
-						const inputId = col.id;
-						if (!inputId || col.type === 'hidden' || col.type === 'readonly') return;
-
-						if (col.required !== false) {
-							const val = formValues[inputId];
-							if (val === undefined || val === null || String(val).trim() === '') {
-								missing.push(col.label);
-							}
-						}
-					});
-				});
-			});
-		}
-		return missing;
-	}
 
 	function markAsModified() {
 		formModified = true;
 	}
 
 	onMount(() => {
-		// Documentação para Desenvolvedores (Acessível via F2)
-		devNotes.setNotes([
-			'<strong>Responsabilidade:</strong> Página especialista para o TCE (Modelo 1501). DIFERENTE do `form-show`, esta página **salva os dados** na tabela `internships` (CRUD completo) além de gerar o PDF.',
-			'<strong>Regra de Endereços Automáticos:</strong> O sistema varre chaves como `RuaAluno`, `CepEmpresa` e gera automaticamente o campo `EnderCompleto{Sulfixo}`.',
-			'<strong>Duplicação de Campos:</strong> Campos `xx` + dígito (ex: `xx1Nome`) copiam o valor do original.',
-			'<strong>Autofill Professor:</strong> Seleção de professor preenche e-mail e matrícula.',
-			'<strong>IDs Especiais:</strong> `modelo_id` fixo em `1501`. `copyright` e `data_atual` injetados.',
-			'<strong>Debug:</strong> Os dados enviados para a geração do PDF são logados no console como `[DEBUG PDF PAYLOAD]`.'
-		]);
-
-		// Inicializar campos especiais
 		formValues['modelo_id'] = '1501';
-		formValues['copyright'] = `© ${new Date().getFullYear()} LCO Systems`;
+		formValues['copyright'] = '© 2026 LCO Systems';
 		formValues['data_atual'] = new Date().toLocaleDateString('pt-BR');
-
-		console.log('🔰 [PAGE MOUNT]: User store state:', $user);
 
 		// Se estiver em modo de edição, preenche o formulário com os dados do estágio
 		if (pageData.mode === 'edit' && pageData.internship) {
-			internshipStatus = pageData.internship.status || 'DRAFT';
-			companyEmail = pageData.internship.companyEmail || '';
 			if (pageData.internship.jsonData) {
 				formValues = {
 					...formValues,
@@ -606,65 +449,17 @@
 		}
 	}
 
-	async function updateStatus(newStatus: string) {
-		const statusLabels: Record<string, string> = {
-			DRAFT: 'Editando',
-			WAITING_APPROVAL: 'Aguardando Aprovação',
-			APPROVED: 'Aprovado',
-			STARTED: 'Estagiando'
-		};
-
-		if (
-			!confirm(`Deseja realmente mudar o status para "${statusLabels[newStatus] || newStatus}"?`)
-		) {
-			return;
-		}
-
-		try {
-			saving = true;
-			const response = await apiFetch(`/internships/${pageData.internship.id}`, {
-				method: 'PUT',
-				body: JSON.stringify({ status: newStatus })
-			});
-
-			if (response.ok) {
-				const updated = await response.json();
-				internshipStatus = updated.status;
-				showToast('Status atualizado com sucesso!', 'success');
-				// Recarrega a página ou atualiza o estado local se necessário
-				if (typeof window !== 'undefined') {
-					window.location.reload(); // Recarrega para garantir que todos os bloqueios de UI sejam aplicados
-				}
-			} else {
-				const err = await response.json();
-				showToast('Erro ao atualizar status: ' + (err.error || 'Erro desconhecido'), 'error');
-			}
-		} catch (err) {
-			console.error('Erro ao atualizar status:', err);
-			showToast('Falha na comunicação com o servidor', 'error');
-		} finally {
-			saving = false;
-		}
-	}
-
-	async function handleApprove() {
-		await updateStatus('APPROVED');
-	}
-
 	async function handleSave() {
 		syncTurno();
 		await checkInternshipPeriod();
 		if (!formValues['nome_aluno']) {
-			showToast('Por favor, preencha o nome do aluno', 'error');
 			return;
 		}
 		if (!formValues['nome_curso']) {
-			showToast('Por favor, selecione o curso', 'error');
 			return;
 		}
 
 		saving = true;
-		saveSuccess = false;
 
 		try {
 			const cleanVal = (val) =>
@@ -694,7 +489,7 @@
 					formValues['dt_fim'] || formValues['data_final'] || formValues['DataFinal']
 				),
 				jsonData: formValues,
-				status: internshipStatus
+				status: 'DRAFT'
 			};
 
 			// Converter matrícula para número se existir
@@ -702,7 +497,7 @@
 				internshipData.studentRegistration = Number(internshipData.studentRegistration);
 			}
 
-			console.log('📦 [DEBUG SAVE PAYLOAD]:', internshipData);
+			
 
 			let response;
 			if (pageData.mode === 'edit' && pageData.internship) {
@@ -718,45 +513,23 @@
 			}
 
 			if (response.ok) {
-				saveSuccess = true;
 				formModified = false;
 				const savedData = await response.json();
 				lastSavedId = savedData.id;
-				companyEmail = savedData.companyEmail || '';
 
-				console.log('🔍 [DEBUG ROLE CHECK]:', {
-					user: $user,
-					rolePlural: $user?.roles,
-					roleSingular: $user?.role || $user?.roles
-				});
-
-				// Abre o novo modal unificado de resultado de salvamento
-				missingFieldsList = checkMissingRequiredFields();
 				showSaveResultModal = true;
 			} else {
 				const err = await response.json();
-				showToast('Erro ao salvar: ' + (err.error || 'Erro desconhecido'), 'error');
+				console.error('Erro ao salvar:', err);
 			}
 		} catch (err) {
 			console.error(err);
-			showToast('Erro de conexão ao salvar o estágio', 'error');
 		} finally {
 			saving = false;
 		}
 	}
 
 	async function handleSubmit(type = 'pdf') {
-		/* 
-		// Se o formulário tiver modificações pendentes, salve primeiro antes de gerar
-		if (formModified) {
-			await handleSave();
-			// Se encontrou erro ao salvar ou falhou, não prossiga com a geração do documento
-			if (!saveSuccess) {
-				return;
-			}
-		}
-		*/
-
 		syncTurno();
 		await checkInternshipPeriod();
 
@@ -771,9 +544,6 @@
 		if (type === 'pdf') {
 			if (successLink) URL.revokeObjectURL(successLink);
 			successLink = '';
-		} else {
-			if (successLinkDocx) URL.revokeObjectURL(successLinkDocx);
-			successLinkDocx = '';
 		}
 		try {
 			const dataToSubmit = { ...formValues };
@@ -819,7 +589,6 @@
 							const xxMatch = inputId.match(/^xx\d(.+)$/);
 							if (xxMatch) {
 								const sourceId = xxMatch[1];
-								// Agora buscamos de dataToSubmit, que já contém os endereços gerados
 								if (dataToSubmit[sourceId] !== undefined) {
 									dataToSubmit[inputId] = dataToSubmit[sourceId];
 								} else if (formValues[sourceId] !== undefined) {
@@ -831,7 +600,6 @@
 								dataToSubmit[inputId] = ' '.repeat(inputId.length);
 								return;
 							}
-							// Formatação de Data para o padrão PT-BR (DD/MM/YYYY)
 							if (
 								(col.type === 'date' || xxMatch) &&
 								typeof val === 'string' &&
@@ -854,7 +622,7 @@
 				data: dataToSubmit
 			};
 
-			console.log('📄 [DEBUG PAYLOAD]:', payload);
+			
 			const endpoint = type === 'pdf' ? '/documentos/gerar-pdf' : '/documentos/gerar-docx';
 
 			const res = await apiFetch(
@@ -864,137 +632,30 @@
 					body: JSON.stringify(payload)
 				},
 				60000
-			); // Aumentado para 60 segundos por ser um processo pesado
+			); 
 
 			if (res.ok) {
 				const blob = await res.blob();
 				if (type === 'pdf') {
 					if (successLink) URL.revokeObjectURL(successLink);
 					successLink = URL.createObjectURL(blob);
-				} else {
-					if (successLinkDocx) URL.revokeObjectURL(successLinkDocx);
-					successLinkDocx = URL.createObjectURL(blob);
 				}
 			} else {
 				const err = await res.json();
-				showToast('Erro ao gerar documento: ' + (err.error || 'Erro desconhecido'), 'error');
+				console.error('Erro ao gerar documento:', err);
 			}
 		} catch (err) {
 			console.error(err);
-			showToast('Erro de conexão ao gerar o documento', 'error');
 		} finally {
 			submitting = false;
-		}
-	}
-
-	async function handleNotifyProfessor() {
-		const professorName = formValues['nome_professor'] || formValues['NomeProfessor'];
-		const professorEmail = formValues['email_professor'] || formValues['EmailProfessor'];
-
-		if (!professorEmail) {
-			showToast('E-mail do professor não encontrado no formulário', 'error');
-			return;
-		}
-
-		sendingEmail = true;
-		try {
-			const res = await apiFetch(
-				`/internships/${lastSavedId || pageData.internship?.id}/notificar-professor`,
-				{
-					method: 'POST',
-					body: JSON.stringify({
-						teacherName: professorName,
-						teacherEmail: professorEmail
-					})
-				}
-			);
-
-			if (res.ok) {
-				showToast('E-mail enviado ao professor com sucesso!');
-				showSaveResultModal = false;
-
-				setTimeout(() => {
-					window.location.href = `/gotce/v2?id=${lastSavedId}`;
-				}, 2000);
-			} else {
-				const err = await res.json();
-				showToast('Erro ao notificar professor: ' + (err.error || 'Erro desconhecido'), 'error');
-			}
-		} catch (err) {
-			console.error(err);
-			showToast('Erro de conexão ao enviar e-mail', 'error');
-		} finally {
-			sendingEmail = false;
-		}
-	}
-
-	async function handleNotifyCompanyApproval() {
-		sendingEmail = true;
-		try {
-			const res = await apiFetch(
-				`/internships/${lastSavedId || pageData.internship?.id}/notificar-aprovacao`,
-				{
-					method: 'POST'
-				}
-			);
-
-			if (res.ok) {
-				showToast('E-mail de aprovação enviado à empresa com sucesso!');
-				showSaveResultModal = false;
-				// Redireciona para atualizar o estado da página (para modo PDF)
-				setTimeout(() => {
-					window.location.href = `/gotce/v2?id=${lastSavedId || pageData.internship?.id}`;
-				}, 2000);
-			} else {
-				const err = await res.json();
-				showToast('Erro ao notificar empresa: ' + (err.error || 'Erro desconhecido'), 'error');
-			}
-		} catch (err) {
-			console.error(err);
-			showToast('Erro de conexão ao enviar e-mail', 'error');
-		} finally {
-			sendingEmail = false;
 		}
 	}
 
 	function handleCloseModal() {
 		showSaveResultModal = false;
 		showSavedModal = false;
-		// Se for um novo estágio, redireciona para carregar o ID correto na URL
 		if (pageData.mode === 'new' && lastSavedId) {
-			window.location.href = `/gotce/v2?id=${lastSavedId}`;
-		}
-	}
-
-	async function confirmStatusChange() {
-		const previousStatus = internshipStatus;
-		internshipStatus = pendingStatus;
-		showStatusModal = false;
-
-		if (pageData.mode === 'edit' && pageData.internship?.id) {
-			try {
-				// Envia apenas o status, mantendo os outros dados no banco intactos (PATCH/PUT parcial)
-				const response = await apiFetch(`/internships/${pageData.internship.id}`, {
-					method: 'PUT',
-					body: JSON.stringify({ status: pendingStatus })
-				});
-
-				if (response.ok) {
-					showToast('Status aplicado imediatamente com sucesso!');
-					pageData.internship.status = pendingStatus;
-				} else {
-					const err = await response.json();
-					showToast('Erro ao aplicar status: ' + (err.error || 'Erro desconhecido'), 'error');
-					internshipStatus = previousStatus; // Reverte se falhou
-				}
-			} catch (err) {
-				console.error(err);
-				showToast('Erro de conexão ao alterar status', 'error');
-				internshipStatus = previousStatus;
-			}
-		} else {
-			// Se o termo nem sequer foi criado no banco ainda, ele só vai segurar a alteração
-			markAsModified();
+			window.location.href = `/gotce/v3?id=${lastSavedId}`;
 		}
 	}
 </script>
@@ -1012,166 +673,21 @@
 			<h3 class="text-xl font-black text-slate-800">Documento salvo com sucesso!</h3>
 		</div>
 
-		<!-- Lista de campos pendentes -->
-		{#if missingFieldsList.length > 0}
-			<div class="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-4">
-				<p class="mb-2 text-sm font-bold text-amber-800">
-					⚠️ Porém ainda faltam campos a preencher:
-				</p>
-				<ul class="list-disc space-y-0.5 pl-5 text-sm text-amber-700">
-					{#each missingFieldsList.slice(0, 3) as field}
-						<li>{field}</li>
-					{/each}
-				</ul>
-				{#if missingFieldsList.length > 3}
-					<p class="mt-2 text-xs font-medium text-amber-600">
-						... e mais {missingFieldsList.length - 3} campo(s)
-					</p>
-				{/if}
-			</div>
-		{/if}
+
 
 		<!-- Botões contextuais -->
 		<div class="flex flex-col gap-3">
-			{#if internshipStatus === 'APPROVED'}
-				<div class="mb-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm">
-					<p class="font-bold text-emerald-800">✅ O que deseja fazer agora?</p>
-					<p class="mt-1 text-xs text-emerald-700">O documento foi aprovado. Escolha uma opção:</p>
-
-					{#if saveModalCompanyEmail}
-						<div class="mt-3 border-t border-emerald-200 pt-2">
-							<span class="text-[10px] font-black tracking-wider text-emerald-600 uppercase"
-								>E-mail da Empresa</span
-							>
-							<p class="text-xs font-bold text-emerald-900">{saveModalCompanyEmail}</p>
-						</div>
-					{:else}
-						<div class="mt-3 border-t border-emerald-200 pt-2 text-center">
-							<p class="text-xs font-bold text-red-500 italic">
-								⚠️ E-mail de notificação não localizado.
-							</p>
-							<p class="text-[10px] text-red-400">Verifique os dados da empresa no cadastro.</p>
-						</div>
-					{/if}
-				</div>
-				<button
-					onclick={handleNotifyCompanyApproval}
-					disabled={sendingEmail}
-					class="btn-action w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50"
-				>
-					{#if sendingEmail}
-						<span class="mr-2 animate-spin">🌀</span> Enviando...
-					{:else}
-						📧 Notificar Empresa e solicitar assinaturas
-					{/if}
-				</button>
-				<button
-					onclick={handleCloseModal}
-					disabled={sendingEmail}
-					class="btn-action w-full border-2 border-slate-200 bg-transparent! text-slate-600! hover:bg-slate-50 disabled:opacity-50"
-				>
-					Vou imprimir os PDFs eu mesmo
-				</button>
-			{:else if isCompanyWithProfessor}
-				<!-- Company COM professor: duas opções -->
-				<div class="mb-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm">
-					<span class="text-xs font-bold tracking-wider text-slate-400 uppercase"
-						>Professor Responsável</span
-					>
-					<p class="font-bold text-slate-700">{saveModalProfessor}</p>
-					<p class="text-xs text-indigo-600">
-						{formValues['email_professor'] ||
-							formValues['EmailProfessor'] ||
-							'E-mail não informado'}
-					</p>
-				</div>
-				<button
-					onclick={handleNotifyProfessor}
-					disabled={sendingEmail}
-					class="btn-action w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50"
-				>
-					{#if sendingEmail}
-						<span class="mr-2 animate-spin">🌀</span> Enviando...
-					{:else}
-						📧 Enviar para o professor analisar
-					{/if}
-				</button>
-				<button
-					onclick={handleCloseModal}
-					disabled={sendingEmail}
-					class="btn-action w-full border-2 border-slate-200 bg-transparent! text-slate-600! hover:bg-slate-50 disabled:opacity-50"
-				>
-					Continue Editando
-				</button>
-			{:else}
-				<!-- Teacher/Admin/Sudo ou Company SEM professor: apenas fechar -->
-				<button
+			<button
 					onclick={handleCloseModal}
 					class="btn-action w-full bg-slate-700 hover:bg-slate-800"
 				>
 					OK
 				</button>
-			{/if}
-		</div>
-	</div>
-</Modal>
-
-<Modal bind:show={showStatusModal}>
-	<div class="p-6">
-		<div class="mb-4 text-center">
-			<div
-				class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 text-3xl"
-			>
-				⚠️
 			</div>
-			<h3 class="text-xl font-black text-slate-800">Confirmar Alteração de Status</h3>
-			<p class="mt-2 text-slate-600">
-				Você confirma a alteração do status para<br />
-				<strong class="text-indigo-600">
-					{pendingStatus === 'DRAFT'
-						? 'Editando'
-						: pendingStatus === 'WAITING_APPROVAL'
-							? 'Aguardando Aprovação'
-							: pendingStatus === 'APPROVED'
-								? 'Aprovado'
-								: pendingStatus === 'STARTED'
-									? 'Estagiando'
-									: pendingStatus}
-				</strong>?<br />
-			</p>
-
-			{#if pendingStatus === 'APPROVED'}
-				<div
-					class="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-left shadow-sm"
-				>
-					<p class="text-sm font-bold text-emerald-800">✅ Quase lá!</p>
-					<p class="mt-1 text-xs text-emerald-700">
-						Caso confirme, não esqueça de avisar a empresa para imprimir em 3 vias e colher as
-						assinaturas.
-					</p>
-				</div>
-			{/if}
 		</div>
+	</Modal>
 
-		<div class="mt-6 flex gap-3">
-			<button
-				onclick={() => {
-					showStatusModal = false;
-					pendingStatus = '';
-				}}
-				class="btn-action flex-1 border-2 border-slate-200 bg-transparent! text-slate-600! hover:bg-slate-50 focus:ring-0"
-			>
-				Cancelar
-			</button>
-			<button
-				onclick={confirmStatusChange}
-				class="btn-action flex-1 bg-amber-500 hover:bg-amber-600"
-			>
-				Confirmar
-			</button>
-		</div>
-	</div>
-</Modal>
+
 
 <svelte:head>
 	<title>{form?.titulo || 'Carregando...'} | Cedup</title>
@@ -1233,8 +749,6 @@
 																rows={col.nRows || undefined}
 																maxlength={col.totalChar || undefined}
 																bind:value={formValues[inputId]}
-																required={col.required !== false}
-																disabled={isLocked}
 																onchange={markAsModified}
 																onkeydown={col.nRows
 																	? (e) => handleTextareaKeydown(e, col.nRows)
@@ -1248,8 +762,6 @@
 																id={inputId}
 																class="col-input"
 																bind:value={formValues[inputId]}
-																required={col.required !== false}
-																disabled={isLocked}
 																onchange={markAsModified}
 															>
 																<option value="" disabled selected>Selecione...</option>
@@ -1264,7 +776,6 @@
 																class="col-input cursor-not-allowed bg-gray-50"
 																readonly
 																bind:value={formValues[inputId]}
-																required={col.required !== false}
 															/>
 														{:else if inputType === 'cep'}
 															<input
@@ -1272,10 +783,8 @@
 																type="text"
 																class="col-input"
 																bind:value={formValues[inputId]}
-																required={col.required !== false}
 																maxlength="9"
 																placeholder="00000-000"
-																disabled={isLocked}
 																onchange={markAsModified}
 																onblur={(e) => handleCepLookup(inputId, e.currentTarget.value)}
 															/>
@@ -1286,8 +795,6 @@
 																	type={inputType}
 																	class="col-input"
 																	bind:value={formValues[inputId]}
-																	required={col.required !== false}
-																	disabled={isLocked}
 																	onchange={markAsModified}
 																	onkeydown={inputType === 'number'
 																		? handleNumericKeydown
@@ -1299,8 +806,7 @@
 																	<button
 																		type="button"
 																		onclick={() => suggestEndDate(inputId)}
-																		disabled={isLocked}
-																		class="ml-1 text-xl transition-transform hover:scale-110 active:scale-95 disabled:opacity-30"
+																		class="ml-1 text-xl transition-transform hover:scale-110 active:scale-95"
 																		title="Sugerir data final baseada em dias úteis"
 																	>
 																		💡
@@ -1320,82 +826,50 @@
 				</div>
 
 				<div class="mt-8 flex w-full flex-col items-center gap-4">
-					{#if uiState.line1}
-						<div
-							class="flex w-full max-w-2xl flex-col items-center gap-1 border-t border-b border-gray-100 py-4 text-center"
-						>
-							<p class="text-lg font-bold text-slate-800">{@html uiState.line1}</p>
-							<p class="text-lg font-bold text-slate-800">{@html uiState.line2}</p>
-						</div>
-					{/if}
-
-					{#if uiState.statusButtons.length > 0}
-						<div class="mb-4 flex w-full flex-wrap justify-center gap-2 border-b border-gray-100 pb-4">
-							{#if uiState.statusButtons.includes('DRAFT')}
-								<button
-									type="button"
-									onclick={() => updateStatus('DRAFT')}
-									class="rounded-xl bg-amber-100 px-6 py-3 text-sm font-bold text-amber-700 transition-all hover:bg-amber-200"
-								>
-									↩️ Voltar para Edição
-								</button>
-							{/if}
-							{#if uiState.statusButtons.includes('STARTED') && internshipStatus !== 'STARTED'}
-								<button
-									type="button"
-									onclick={() => updateStatus('STARTED')}
-									class="rounded-xl bg-indigo-600 px-8 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-100 transition-all hover:-translate-y-0.5 hover:bg-indigo-700 hover:shadow-indigo-200"
-								>
-									🚀 Marcar como Estágio Iniciado
-								</button>
-							{/if}
-						</div>
-					{/if}
+					<div
+						class="flex w-full max-w-2xl flex-col items-center gap-1 border-t border-b border-gray-100 py-4 text-center"
+					>
+						<p class="text-lg font-bold text-slate-800">
+							{pageData.mode === 'new'
+								? 'Este documento está no modo de CRIAÇÃO.'
+								: 'Este documento está no modo de EDIÇÃO.'}
+						</p>
+						<p class="text-lg font-bold text-slate-800">
+							{pageData.mode === 'new'
+								? 'Após preencher os campos clique em salvar estágio.'
+								: 'Após editar os campos clique em atualizar estágio.'}
+						</p>
+					</div>
 
 					<div class="flex w-full max-w-2xl flex-col gap-4 sm:flex-row">
-						{#if uiState.showSave}
-							<button
-								type="button"
-								onclick={handleSave}
-								disabled={!formModified || saving}
-								class="btn-submit flex-1"
-								style="background-color: {form.tituloColor}; opacity: {!formModified || saving
-									? 0.5
-									: 1}; cursor: {!formModified || saving ? 'not-allowed' : 'pointer'};"
-							>
-								{#if saving}
-									<span class="mr-2 animate-spin">🌀</span> Salvando...
-								{:else}
-									{pageData.mode === 'new' ? 'Salvar Estágio' : 'Atualizar Estágio'}
-								{/if}
-							</button>
-						{/if}
+						<button
+							type="button"
+							onclick={handleSave}
+							disabled={!formModified || saving}
+							class="btn-submit flex-1"
+							style="background-color: {form.tituloColor}; opacity: {!formModified || saving
+								? 0.5
+								: 1}; cursor: {!formModified || saving ? 'not-allowed' : 'pointer'};"
+						>
+							{#if saving}
+								<span class="mr-2 animate-spin">🌀</span> Salvando...
+							{:else}
+								💾 {pageData.mode === 'new' ? 'Salvar Estágio' : 'Atualizar Estágio'}
+							{/if}
+						</button>
 
-						{#if uiState.showApprove}
-							<button
-								type="button"
-								onclick={handleApprove}
-								disabled={saving}
-								class="flex-1 rounded-xl bg-emerald-600 px-6 py-4 text-center font-bold text-white shadow-lg shadow-emerald-200 transition-all hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-emerald-300 disabled:opacity-50"
-							>
-								{saving ? 'Aprovando...' : 'Aprovar Estágio'}
-							</button>
-						{/if}
-
-						{#if uiState.showPdf}
-							<button
-								type="submit"
-								disabled={submitting}
-								class="btn-submit flex-1"
-								style="background-color: #dc2626"
-							>
-								{#if submitting}
-									<span class="mr-2 animate-spin">🌀</span> Processando...
-								{:else}
-									📕 Gerar PDF
-								{/if}
-							</button>
-						{/if}
+						<button
+							type="submit"
+							disabled={submitting}
+							class="btn-submit flex-1"
+							style="background-color: #dc2626"
+						>
+							{#if submitting}
+								<span class="mr-2 animate-spin">🌀</span> Processando...
+							{:else}
+								📕 Gerar PDF
+							{/if}
+						</button>
 
 						<!-- 
 						<button
@@ -1413,34 +887,20 @@
 						</button>
 						-->
 					</div>
-
-					{#if successLink || successLinkDocx}
+					{#if successLink}
 						<div
 							class="flex w-full max-w-md flex-col gap-4 rounded-2xl border-2 border-blue-500 bg-white p-6 text-center shadow-xl"
 							in:fade
 						>
 							<p class="mb-4 font-bold text-blue-700">✨ Documento pronto!</p>
 							<div class="flex flex-col justify-center gap-3 sm:flex-row">
-								{#if successLink}
-									<a
-										href={successLink}
-										download={`1501-${formValues['nome_aluno'] || formValues['NomeAluno'] || 'documento'}.pdf`}
-										class="btn-action w-full bg-red-600 hover:bg-red-700"
-									>
-										📥 Baixar PDF
-									</a>
-								{/if}
-								<!-- 
-                                {#if successLinkDocx}
 								<a
-									href={successLinkDocx}
-									download={`1501-${formValues['nome_aluno'] || formValues['NomeAluno'] || 'documento'}.docx`}
-									class="btn-action bg-blue-600 hover:bg-blue-700 w-full"
-                                >
-                                    📥 Baixar Word
-                                </a>
-                                {/if}
-                                -->
+									href={successLink}
+									download={`1501-${formValues['nome_aluno'] || formValues['NomeAluno'] || 'documento'}.pdf`}
+									class="btn-action w-full bg-red-600 hover:bg-red-700"
+								>
+									📥 Baixar PDF
+								</a>
 							</div>
 						</div>
 					{/if}
@@ -1449,19 +909,7 @@
 		</div>
 	</div>
 
-	{#if toastMessage}
-		<div
-			class="fixed right-4 bottom-4 z-50 rounded-lg px-6 py-3 text-white shadow-lg transition-all"
-			style="background-color: {toastType === 'success'
-				? '#10B981'
-				: toastType === 'warning'
-					? '#f59e0b'
-					: '#EF4444'};"
-			in:fade
-		>
-			<p class="font-bold">{toastMessage}</p>
-		</div>
-	{/if}
+
 {:else}
 	<div class="flex min-h-[70vh] items-center justify-center">
 		<p class="animate-pulse text-gray-500">Carregando formulário...</p>
