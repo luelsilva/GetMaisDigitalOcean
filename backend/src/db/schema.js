@@ -6,7 +6,7 @@ const otpTypeEnum = pgEnum('otp_type', ['registration', 'password_reset']);
 // Enum para roles de usuário
 const userRolesEnum = pgEnum('user_role', ['generic', 'student', 'company', 'to_company', 'teacher', 'admin', 'sudo']);
 
-const internshipStatusEnum = pgEnum('internship_status', ['DRAFT', 'WAITING_APPROVAL', 'REVISION_REQUESTED', 'APPROVED', 'STARTED']);
+const internshipStatusEnum = pgEnum('internship_status', ['DRAFT', 'WAITING_APPROVAL', 'REVISION_REQUESTED', 'APPROVED', 'STARTED', 'FINISHED']);
 
 // Enum para status de e-mail (Resend)
 const emailStatusEnum = pgEnum('email_status', ['sent', 'delivered', 'opened', 'clicked', 'bounced', 'complained', 'failed']);
