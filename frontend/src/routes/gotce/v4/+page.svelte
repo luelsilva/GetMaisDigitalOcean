@@ -496,7 +496,32 @@
 		}
 	}
 
+	function checkMissingRequiredFields() {
+		const missing: string[] = [];
+		if (form?.secoes) {
+			form.secoes.forEach((secao: any) => {
+				secao.rows.forEach((row: any) => {
+					row.cols.forEach((col: any) => {
+						const inputId = col.id;
+						if (!inputId || col.type === 'hidden' || col.type === 'readonly') return;
+
+						if (col.required !== false) {
+							const val = formValues[inputId];
+							if (val === undefined || val === null || String(val).trim() === '') {
+								missing.push(col.label);
+							}
+						}
+					});
+				});
+			});
+		}
+		return missing;
+	}
+
 	async function handleSave(silent = false) {
+		// Se nada foi modificado e é um salvamento automático, não precisa chamar a API
+		if (silent && !formModified) return true;
+
 		syncTurno();
 		await checkInternshipPeriod();
 		if (!formValues['nome_aluno'] && !formValues['NomeAluno']) {
