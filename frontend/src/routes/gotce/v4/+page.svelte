@@ -26,6 +26,9 @@
 			canSave: true,
 			canPDF: true,
 			canSubmitForApproval: mode === 'edit' && internship_status === 'DRAFT',
+			canApprove: false,
+			canReject: false,
+			readonly: false,
 			saveLabel: mode === 'new' ? 'Salvar Estágio' : 'Atualizar Estágio',
 		};
 
@@ -42,18 +45,44 @@
 		let title = 'Este documento está no modo de EDIÇÃO.';
 		let subtitle = 'Após editar os campos clique em atualizar estágio.';
 
-		// Customização baseada em status
+		// Customização baseada em status e role
 		if (internship_status === 'FINISHED') {
-			title = 'Este estágio está <span class="text-emerald-600">FINALIZADO</span>.';
+			title = 'Este TCE está <span class="text-emerald-600">FINALIZADO</span>.';
 			subtitle = 'O documento não pode mais ser alterado.';
 			config.canSave = false;
+			config.readonly = true;
 		} else if (internship_status === 'APPROVED') {
-			title = 'Este estágio está <span class="text-indigo-600">APROVADO</span>.';
+			title = 'Este TCE está <span class="text-indigo-600">APROVADO</span>.';
+			subtitle = 'Agora você pode gerar o PDF para imprimir.';
+			config.canSave = false;
+			config.readonly = true;
 		} else if (internship_status === 'WAITING_APPROVAL') {
-			title = 'Este estágio está <span class="text-amber-600">AGUARDANDO APROVAÇÃO</span>.';
+			title = 'Este TCE está <span class="text-amber-600">AGUARDANDO APROVAÇÃO</span>.';
+
+			if (user_role === 'company') {
+				subtitle = 'E no momento o documento não pode ser editado.';
+				config.canSave = false;
+				config.canPDF = false;
+				config.canSubmitForApproval = false;
+				config.readonly = true;
+			} else if (user_role === 'teacher' || user_role === 'admin' || user_role === 'sudo') {
+				subtitle = 'Professor, analize, edite e clique aprovar ou reprovar.';
+				config.canApprove = true;
+				config.canReject = true;
+				config.readonly = false; // Professor pode editar para corrigir
+			}
 		}
 
-
+		// Se for professor, independente do status (exceto finished), ele pode ter as ações de aprovação se estiver aguardando
+		if (
+			(user_role === 'teacher' || user_role === 'admin' || user_role === 'sudo') &&
+			internship_status === 'WAITING_APPROVAL'
+		) {
+			subtitle = 'Professor, analize, edite e clique aprovar ou reprovar.';
+			config.canApprove = true;
+			config.canReject = true;
+			config.readonly = false;
+		}
 
 		config.message = `
 			<p class="text-lg font-bold text-slate-800">${title}</p>
@@ -804,6 +833,65 @@
 		}
 	}
 
+	async function handleApprove() {
+		if (!confirm('Deseja realmente APROVAR este estágio?')) return;
+
+		submitting = true;
+		try {
+			const response = await apiFetch(`/internships/${pageData.internship.id}`, {
+				method: 'PUT',
+				body: JSON.stringify({
+					...pageData.internship,
+					jsonData: formValues,
+					status: 'APPROVED'
+				})
+			});
+
+			if (response.ok) {
+				alert('Estágio aprovado com sucesso!');
+				window.location.reload();
+			} else {
+				const err = await response.json();
+				alert('Erro ao aprovar: ' + (err.message || 'Erro desconhecido'));
+			}
+		} catch (err) {
+			console.error(err);
+			alert('Erro de conexão ao aprovar.');
+		} finally {
+			submitting = false;
+		}
+	}
+
+	async function handleReject() {
+		if (!confirm('Deseja realmente REPROVAR este estágio? Ele voltará para o status de edição para a empresa.'))
+			return;
+
+		submitting = true;
+		try {
+			const response = await apiFetch(`/internships/${pageData.internship.id}`, {
+				method: 'PUT',
+				body: JSON.stringify({
+					...pageData.internship,
+					jsonData: formValues,
+					status: 'DRAFT'
+				})
+			});
+
+			if (response.ok) {
+				alert('Estágio reprovado e devolvido para edição!');
+				window.location.reload();
+			} else {
+				const err = await response.json();
+				alert('Erro ao reprovar: ' + (err.message || 'Erro desconhecido'));
+			}
+		} catch (err) {
+			console.error(err);
+			alert('Erro de conexão ao reprovar.');
+		} finally {
+			submitting = false;
+		}
+	}
+
 	function handleCloseModal() {
 		showSaveResultModal = false;
 		showSavedModal = false;
@@ -967,6 +1055,7 @@
 																oninput={col.nRows
 																	? (e) => handleTextareaInput(e, col.nRows)
 																	: undefined}
+																disabled={pageConfig.readonly}
 															></textarea>
 														{:else if inputType === 'select'}
 															<select
@@ -975,6 +1064,7 @@
 																required={col.required}
 																bind:value={formValues[inputId]}
 																onchange={markAsModified}
+																disabled={pageConfig.readonly}
 															>
 																<option value="" disabled selected>Selecione...</option>
 																{#each getOptions(inputId) as opt}
@@ -1000,6 +1090,7 @@
 																placeholder="00000-000"
 																onchange={markAsModified}
 																onblur={(e) => handleCepLookup(inputId, e.currentTarget.value)}
+																disabled={pageConfig.readonly}
 															/>
 														{:else}
 															<div class="relative flex items-center">
@@ -1013,6 +1104,7 @@
 																	onkeydown={inputType === 'number'
 																		? handleNumericKeydown
 																		: undefined}
+																	disabled={pageConfig.readonly}
 																/>
 																{#if inputType === 'date' && (inputId
 																		.toLowerCase()
@@ -1020,7 +1112,8 @@
 																	<button
 																		type="button"
 																		onclick={() => suggestEndDate(inputId)}
-																		class="ml-1 text-xl transition-transform hover:scale-110 active:scale-95"
+																		disabled={pageConfig.readonly}
+																		class="ml-1 text-xl transition-transform hover:scale-110 active:scale-95 disabled:opacity-30"
 																		title="Sugerir data final baseada em dias úteis"
 																	>
 																		💡
@@ -1077,6 +1170,38 @@
 									<span class="mr-2 animate-spin">🌀</span> Enviando...
 								{:else}
 									📤 Enviar para o professor avaliar
+								{/if}
+							</button>
+						{/if}
+
+						{#if pageConfig.canApprove}
+							<button
+								type="button"
+								onclick={handleApprove}
+								disabled={submitting || saving}
+								class="btn-submit flex-1"
+								style="background-color: #059669"
+							>
+								{#if submitting}
+									<span class="mr-2 animate-spin">🌀</span> Processando...
+								{:else}
+									✅ Aprovar Estágio
+								{/if}
+							</button>
+						{/if}
+
+						{#if pageConfig.canReject}
+							<button
+								type="button"
+								onclick={handleReject}
+								disabled={submitting || saving}
+								class="btn-submit flex-1"
+								style="background-color: #dc2626"
+							>
+								{#if submitting}
+									<span class="mr-2 animate-spin">🌀</span> Processando...
+								{:else}
+									❌ Reprovar / Devolver
 								{/if}
 							</button>
 						{/if}
