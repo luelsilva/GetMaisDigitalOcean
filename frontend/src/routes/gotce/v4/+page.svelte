@@ -72,6 +72,8 @@
 
 
 	let showSaveResultModal = $state(false);
+	let showValidationModal = $state(false);
+	let missingFieldsList = $state<string[]>([]);
 	let lastSavedId = $state('');
 
 
@@ -732,12 +734,26 @@
 	}
 
 	async function handleSendForApproval() {
+		// Verificar pendências antes de tudo
+		const missing = checkMissingRequiredFields();
+		if (missing.length > 0) {
+			missingFieldsList = missing;
+			showValidationModal = true;
+			return;
+		}
+
+		await executeSubmission();
+	}
+
+	async function executeSubmission() {
 		if (
 			!confirm(
 				'Deseja enviar este estágio para avaliação do professor? Após o envio, você não poderá editá-lo até que seja revisado.'
 			)
 		)
 			return;
+
+		showValidationModal = false;
 
 		// Salva os dados atuais primeiro
 		const saved = await handleSave(true);
@@ -804,6 +820,63 @@
 			</div>
 		</div>
 	</Modal>
+
+<!-- Modal de Validação de Pendências -->
+<Modal bind:show={showValidationModal}>
+	<div class="p-6" style="min-width: 340px; max-width: 480px;">
+		<div class="mb-4 flex flex-col items-center text-center">
+			<div
+				class="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 text-3xl"
+			>
+				⚠️
+			</div>
+			<h3 class="text-xl font-black text-slate-800">Campos Pendentes</h3>
+			<p class="mt-2 text-sm text-slate-600">
+				O documento possui pendências que precisam ser corrigidas antes do envio:
+			</p>
+		</div>
+
+		<div class="mb-6 rounded-lg bg-slate-50 p-4">
+			<ul class="space-y-2">
+				{#each missingFieldsList.slice(0, 3) as field}
+					<li class="flex items-center text-sm text-slate-700">
+						<span class="mr-2 text-amber-500">•</span>
+						{field}
+					</li>
+				{/each}
+				{#if missingFieldsList.length > 3}
+					<li class="pt-2 text-xs font-bold text-slate-500">
+						... e mais {missingFieldsList.length - 3} pendência(s).
+					</li>
+				{/if}
+			</ul>
+		</div>
+
+		<button
+			onclick={() => (showValidationModal = false)}
+			class="btn-action w-full bg-slate-700 hover:bg-slate-800"
+		>
+			Entendido, vou corrigir
+		</button>
+
+		<div class="mt-8 border-t border-slate-100 pt-6 text-center">
+			<p class="mb-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+				E-mail do Professor Orientador
+			</p>
+			<p class="text-sm font-medium text-slate-600">
+				{formValues['email_professor'] || formValues['EmailProfessor'] || 'E-mail não informado'}
+			</p>
+
+			<button
+				type="button"
+				onclick={executeSubmission}
+				class="btn-action mt-6 w-full bg-amber-600 hover:bg-amber-700 text-white"
+			>
+				Desejo enviar mesmo com pendências
+			</button>
+		</div>
+	</div>
+</Modal>
 
 
 

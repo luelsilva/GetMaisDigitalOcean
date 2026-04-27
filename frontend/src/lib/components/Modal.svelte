@@ -15,14 +15,16 @@
 	}
 
 	let {
-		show = false,
+		show = $bindable(false),
 		title,
 		message,
 		confirmLabel = 'Confirmar',
 		cancelLabel = 'Cancelar',
 		type = 'info',
 		onConfirm = () => {},
-		onCancel = () => {},
+		onCancel = () => {
+			show = false;
+		},
 		children
 	}: Props = $props();
 
@@ -37,7 +39,7 @@
 
 	// Fechar ao apertar ESC
 	function handleKeydown(event: KeyboardEvent) {
-		if (show && event.key === 'Escape' && onCancel) {
+		if (show && event.key === 'Escape') {
 			onCancel();
 		}
 	}
@@ -63,6 +65,16 @@
 			class="relative w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-slate-100"
 			transition:scale={{ duration: 250, start: 0.95 }}
 		>
+			<!-- Botão fechar (X) -->
+			<button
+				type="button"
+				class="absolute top-5 right-5 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-slate-50 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+				onclick={onCancel}
+				aria-label="Fechar"
+			>
+				<span class="text-xl">×</span>
+			</button>
+
 			{#if children}
 				{@render children()}
 			{:else}
