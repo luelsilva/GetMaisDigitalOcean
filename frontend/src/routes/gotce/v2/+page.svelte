@@ -56,6 +56,11 @@
 			subtitle = 'Agora você pode gerar o PDF para imprimir.';
 			config.canSave = false;
 			config.readonly = true;
+		} else if (internship_status === 'STARTED') {
+			title = 'Este estágio já foi iniciado.';
+			subtitle = 'O documento não pode ser editado.';
+			config.canSave = false;
+			config.readonly = true;
 		} else if (internship_status === 'WAITING_APPROVAL') {
 			title = 'Este TCE está <span class="text-amber-600">AGUARDANDO APROVAÇÃO</span>.';
 
@@ -66,7 +71,7 @@
 				config.canSubmitForApproval = false;
 				config.readonly = true;
 			} else if (user_role === 'teacher' || user_role === 'admin' || user_role === 'sudo') {
-				subtitle = 'Professor, analize, edite e clique aprovar ou reprovar.';
+				subtitle = 'Professor, analize e faça as correções necessárias. </br> Se estiver tudo correto clique em aprovar. </br> Caso contrário clique em reprovar.';
 				config.canApprove = true;
 				config.canReject = true;
 				config.readonly = false; // Professor pode editar para corrigir
@@ -78,7 +83,7 @@
 			(user_role === 'teacher' || user_role === 'admin' || user_role === 'sudo') &&
 			internship_status === 'WAITING_APPROVAL'
 		) {
-			subtitle = 'Professor, analize, edite e clique aprovar ou reprovar.';
+			subtitle = 'Professor, analize e faça as correções necessárias. </br> Se estiver tudo correto clique em aprovar. </br> Caso contrário clique em reprovar.';
 			config.canApprove = true;
 			config.canReject = true;
 			config.readonly = false;

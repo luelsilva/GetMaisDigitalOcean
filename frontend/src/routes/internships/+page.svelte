@@ -18,7 +18,7 @@
 		jsonData: any;
 		createdAt: string;
 		updatedAt: string;
-		status: 'DRAFT' | 'WAITING_APPROVAL' | 'REVISION_REQUESTED' | 'APPROVED' | 'STARTED';
+		status: 'DRAFT' | 'WAITING_APPROVAL' | 'REVISION_REQUESTED' | 'APPROVED' | 'STARTED' | 'FINISHED';
 	}
 
 	interface Teacher {
@@ -42,7 +42,8 @@
 		DRAFT: 'Editando',
 		WAITING_APPROVAL: 'Aguardando Aprovação',
 		APPROVED: 'Aprovado',
-		STARTED: 'Estagiando'
+		STARTED: 'Estagiando',
+		FINISHED: 'Finalizado'
 	};
 
 	function toggleStatus(status: string) {
@@ -490,6 +491,12 @@
 												class="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-100 px-2.5 py-0.5 text-[10px] font-black tracking-tight text-indigo-700 uppercase"
 											>
 												Estagiando
+											</span>
+										{:else if item.status === 'FINISHED'}
+											<span
+												class="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-100 px-2.5 py-0.5 text-[10px] font-black tracking-tight text-emerald-700 uppercase"
+											>
+												Finalizado
 											</span>
 										{:else}
 											<span
