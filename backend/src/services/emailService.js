@@ -182,7 +182,8 @@ const emailService = {
                 studentName,
                 link,
                 observationsBlock,
-                year: new Date().getFullYear()
+                year: new Date().getFullYear(),
+                uniqueId: Date.now()
             });
 
             if (!html) throw new Error('Não foi possível carregar o template tce_rejected');
