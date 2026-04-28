@@ -109,6 +109,8 @@
 	let showValidationModal = $state(false);
 	let missingFieldsList = $state<string[]>([]);
 	let lastSavedId = $state('');
+	let showRejectModal = $state(false);
+	let rejectObservations = $state('');
 
 
 
@@ -853,7 +855,17 @@
 			});
 
 			if (response.ok) {
-				alert('Estágio aprovado com sucesso!');
+				// Envia email de aprovação para a empresa (endpoint já faz join com profiles e loga o email)
+				const notifyRes = await apiFetch(`/internships/${pageData.internship.id}/notificar-aprovacao`, {
+					method: 'POST'
+				});
+
+				if (notifyRes.ok) {
+					alert('Estágio aprovado com sucesso! Um e-mail foi enviado para a empresa.');
+				} else {
+					const notifyErr = await notifyRes.json();
+					alert('Estágio aprovado, mas houve um erro ao enviar o e-mail: ' + (notifyErr.error || 'Erro desconhecido'));
+				}
 				window.location.reload();
 			} else {
 				const err = await response.json();
@@ -867,10 +879,13 @@
 		}
 	}
 
-	async function handleReject() {
-		if (!confirm('Deseja realmente REPROVAR este estágio? Ele voltará para o status de edição para a empresa.'))
-			return;
+	function handleReject() {
+		rejectObservations = '';
+		showRejectModal = true;
+	}
 
+	async function executeReject() {
+		showRejectModal = false;
 		submitting = true;
 		try {
 			const response = await apiFetch(`/internships/${pageData.internship.id}`, {
@@ -883,7 +898,18 @@
 			});
 
 			if (response.ok) {
-				alert('Estágio reprovado e devolvido para edição!');
+				// Envia email de reprovação com as observações do professor
+				const notifyRes = await apiFetch(`/internships/${pageData.internship.id}/notificar-reprovacao`, {
+					method: 'POST',
+					body: JSON.stringify({ observations: rejectObservations })
+				});
+
+				if (notifyRes.ok) {
+					alert('Estágio devolvido para revisão! Um e-mail foi enviado para a empresa.');
+				} else {
+					const notifyErr = await notifyRes.json();
+					alert('Estágio devolvido, mas houve um erro ao enviar o e-mail: ' + (notifyErr.error || 'Erro desconhecido'));
+				}
 				window.location.reload();
 			} else {
 				const err = await response.json();
@@ -1163,7 +1189,7 @@
 							</button>
 						{/if}
 
-						{#if pageConfig.canSubmitForApproval}
+						{#if pageConfig.canSubmitForApproval && pageData.user_role === 'company'}
 							<button
 								type="button"
 								onclick={handleSendForApproval}
@@ -1254,6 +1280,51 @@
 		<p class="animate-pulse text-gray-500">Carregando formulário...</p>
 	</div>
 {/if}
+
+<!-- Modal de Reprovação com Observações -->
+<Modal
+	bind:show={showRejectModal}
+	onCancel={() => (showRejectModal = false)}
+	onConfirm={executeReject}
+>
+	<div class="px-6 pt-8 pb-2 text-center">
+		<div class="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-red-50">
+			<span class="text-3xl">❌</span>
+		</div>
+		<h3 class="text-xl font-black text-slate-800 uppercase tracking-tight">Devolver para Revisão</h3>
+	</div>
+	<div class="px-6 pb-2">
+		<p class="text-base font-semibold text-slate-700 mb-3 text-center">
+			✏️ Professor, informe quais correções a empresa precisa fazer no TCE?
+		</p>
+		<textarea
+			bind:value={rejectObservations}
+			rows="5"
+			placeholder="Ex: O CPF da empresa está incorreto. Verifique também as datas do estágio..."
+			class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 placeholder-slate-400 outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100 resize-none transition"
+		></textarea>
+		<p class="mt-2 text-xs text-slate-400">
+			* As orientações serão enviadas por e-mail para a empresa junto com o aviso de devolução.
+		</p>
+	</div>
+	<div class="flex flex-col gap-2 p-6 sm:flex-row">
+		<button
+			type="button"
+			onclick={() => (showRejectModal = false)}
+			class="flex-1 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-500 transition hover:bg-slate-50 active:scale-95"
+		>
+			Cancelar
+		</button>
+		<button
+			type="button"
+			onclick={executeReject}
+			disabled={!rejectObservations.trim()}
+			class="flex-[1.5] rounded-2xl bg-red-600 px-5 py-3 text-sm font-black text-white shadow-lg transition hover:bg-red-700 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-red-600 disabled:active:scale-100"
+		>
+			Confirmar Devolução
+		</button>
+	</div>
+</Modal>
 
 <style>
 	.row-container {

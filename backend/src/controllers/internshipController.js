@@ -588,6 +588,62 @@ exports.notifyCompanyApproval = async (req, res, next) => {
         res.status(500).json({ error: 'Falha ao enviar e-mail de aprovação' });
     }
 };
+// Notificar Empresa sobre Reprovação
+exports.notifyCompanyRejection = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+
+        const [internship] = await db.select()
+            .from(internships)
+            .where(eq(internships.id, id));
+
+        if (!internship) {
+            return res.status(404).json({ error: 'Estágio não encontrado' });
+        }
+
+        const studentName = internship.studentName;
+        // Prioridade: email oficial da tabela profiles vinculado ao company_id (ou user_id)
+        const targetId = internship.companyId || internship.userId;
+        const [companyProfile] = await db.select({ email: profiles.email })
+            .from(profiles)
+            .where(eq(profiles.id, targetId));
+
+        let companyEmail = companyProfile?.email;
+
+        // Fallback: se não achar no perfil, tenta o campo do formulário
+        if (!companyEmail) {
+            companyEmail = internship.jsonData?.email_concedente || internship.jsonData?.EmailConcedente;
+        }
+
+        if (!companyEmail || !companyEmail.includes('@')) {
+            return res.status(400).json({ error: 'E-mail da empresa não encontrado ou inválido para este registro' });
+        }
+
+        const { observations } = req.body || {};
+
+        const baseUrl = config.corsOrigin[0] || 'http://localhost:5173';
+        const link = `${baseUrl}/gotce/v2?id=${id}`;
+
+        const resEmail = await emailService.sendTCERejectedToCompany(companyEmail, studentName, link, observations || '');
+
+        if (resEmail?.data?.id) {
+            await db.insert(emailLogs).values({
+                resendId: resEmail.data.id,
+                type: 'other',
+                toEmail: companyEmail,
+                subject: `❌ TCE Devolvido para Revisão: ${studentName}`,
+                status: 'sent',
+                internshipId: id,
+                sentBy: req.user.id
+            });
+        }
+
+        res.json({ message: 'E-mail de reprovação enviado com sucesso à empresa' });
+    } catch (error) {
+        console.error('[NOTIFY ERROR]', error);
+        res.status(500).json({ error: 'Falha ao enviar e-mail de reprovação' });
+    }
+};
 
 
 

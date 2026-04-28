@@ -163,6 +163,40 @@ const emailService = {
             console.error('[EMAIL SERVICE] Erro ao enviar aprovação para empresa:', err);
             return { success: false, error: err };
         }
+    },
+
+    /**
+     * Notifica a empresa que o TCE foi devolvido para revisão.
+     */
+    sendTCERejectedToCompany: async (to, studentName, link, observations = '') => {
+        try {
+            // Monta o bloco de observações se houver conteúdo
+            const observationsBlock = observations && observations.trim()
+                ? `<div style="background-color: #fff7ed; border-radius: 8px; padding: 20px; border: 1px solid #fed7aa; margin: 24px 0;">
+                    <p style="margin: 0 0 8px 0; color: #9a3412; font-size: 15px; font-weight: bold;">📝 Orientações do Professor:</p>
+                    <p style="margin: 0; color: #7c2d12; font-size: 14px; white-space: pre-line;">${observations.trim()}</p>
+                   </div>`
+                : '';
+
+            const html = emailService._renderTemplate('tce_rejected', {
+                studentName,
+                link,
+                observationsBlock,
+                year: new Date().getFullYear()
+            });
+
+            if (!html) throw new Error('Não foi possível carregar o template tce_rejected');
+
+            return await resend.emails.send({
+                from: config.resend.from,
+                to: to,
+                subject: `❌ TCE Devolvido para Revisão: ${studentName}`,
+                html: html
+            });
+        } catch (err) {
+            console.error('[EMAIL SERVICE] Erro ao enviar reprovação para empresa:', err);
+            return { success: false, error: err };
+        }
     }
 };
 
