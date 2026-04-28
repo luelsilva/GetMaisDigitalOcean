@@ -61,10 +61,6 @@ export const load: PageLoad = async ({ fetch, url }) => {
             }
         }
 
-        // Buscar informações do usuário logado para obter o role
-        const meRes = await apiFetch('/auth/me', {}, fetch);
-        const meData = meRes.ok ? await meRes.json() : null;
-
         return {
             form: {
                 ...formData.config,
@@ -79,9 +75,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
             courses: coursesList,
             teachers: teachersList,
             internship: internshipData,
-            mode: mode,
-            internship_status: internshipData?.status || 'DRAFT',
-            user_role: meData?.roles || 'generic'
+            mode: mode
         };
     } catch (err: any) {
         if (err.status) throw err;

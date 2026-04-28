@@ -1,4 +1,8 @@
 
 
-V2 é uma versão modificada de V1
+V4 é onde começaremos a implementar
+
+as novas funções do zero
+
+para evitar conflitos
 
