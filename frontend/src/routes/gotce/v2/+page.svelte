@@ -112,6 +112,14 @@
 	let showRejectModal = $state(false);
 	let rejectObservations = $state('');
 
+	// Efeito para redirecionar para o modo edição após salvar um novo documento
+	// Isso garante que o ID seja pego na URL seja em salvamento silencioso ou após fechar o modal
+	$effect(() => {
+		if (lastSavedId && !showSaveResultModal && pageData.mode === 'new') {
+			window.location.href = `/gotce/v2?id=${lastSavedId}`;
+		}
+	});
+
 
 
 
@@ -627,11 +635,13 @@
 			if (response.ok) {
 				formModified = false;
 				const savedData = await response.json();
-				lastSavedId = savedData.id;
 
+			
 				if (!silent) {
 					showSaveResultModal = true;
 				}
+				
+				lastSavedId = savedData.id;
 				return true;
 			} else {
 				const err = await response.json();
@@ -926,9 +936,6 @@
 	function handleCloseModal() {
 		showSaveResultModal = false;
 		showSavedModal = false;
-		if (pageData.mode === 'new' && lastSavedId) {
-			window.location.href = `/gotce/v2?id=${lastSavedId}`;
-		}
 	}
 </script>
 
@@ -1174,7 +1181,7 @@
 						{#if pageConfig.canSave}
 							<button
 								type="button"
-								onclick={handleSave}
+								onclick={() => handleSave()}
 								disabled={!formModified || saving}
 								class="btn-submit flex-1"
 								style="background-color: {form.tituloColor}; opacity: {!formModified || saving
