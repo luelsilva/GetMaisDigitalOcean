@@ -4,7 +4,7 @@ const adminMenuController = require('../controllers/adminMenuController');
 const { authenticateToken, authorizeRoles } = require('../middleware/authMiddleware');
 
 // Middleware global para todas as rotas deste arquivo: Autenticação + Role 'sudo'
-router.use(authenticateToken, authorizeRoles('sudo'));
+router.use(authenticateToken, authorizeRoles('sudo', 'admin'));
 
 // === SECTIONS ROUTES ===
 router.get('/sections', adminMenuController.listSections);
