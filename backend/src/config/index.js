@@ -31,7 +31,8 @@ module.exports = {
   resend: {
     apiKey: process.env.RESEND_API_KEY,
     from: process.env.EMAIL_FROM || 'onboarding@resend.dev',
-    tceManagerEmail: process.env.TCE_MANAGER_EMAIL || 'estagiocedupjlle@sed.sc.gov.br'
+    tceManagerEmail: process.env.TCE_MANAGER_EMAIL || 'estagiocedupjlle@sed.sc.gov.br',
+    contactEmail: process.env.CONTACT_EMAIL || 'suporte@getmais.com.br'
   },
   systemApiKey: process.env.SYSTEM_API_KEY || 'keep-alive-secret-123'
 };

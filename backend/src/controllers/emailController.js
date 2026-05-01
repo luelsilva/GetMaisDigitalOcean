@@ -1,6 +1,7 @@
 const { db } = require('../db');
 const { emailLogs, internships, profiles } = require('../db/schema');
 const { desc, eq } = require('drizzle-orm');
+const emailService = require('../services/emailService');
 
 exports.getEmailLogs = async (req, res, next) => {
     try {
@@ -27,6 +28,26 @@ exports.getEmailLogs = async (req, res, next) => {
 
         const logs = await query;
         res.json(logs);
+    } catch (error) {
+        next(error);
+    }
+};
+
+exports.sendContact = async (req, res, next) => {
+    try {
+        const { name, email, subject, message } = req.body;
+        
+        if (!name || !email || !subject || !message) {
+            return res.status(400).json({ error: 'Todos os campos são obrigatórios' });
+        }
+
+        const result = await emailService.sendContactEmail(name, email, subject, message);
+
+        if (result.error) {
+            return res.status(500).json({ error: 'Erro ao enviar e-mail' });
+        }
+
+        res.json({ success: true, message: 'Mensagem enviada com sucesso!' });
     } catch (error) {
         next(error);
     }

@@ -198,6 +198,31 @@ const emailService = {
             console.error('[EMAIL SERVICE] Erro ao enviar reprovação para empresa:', err);
             return { success: false, error: err };
         }
+    },
+    /**
+     * Envia e-mail de contato recebido pelo formulário da página Sobre.
+     */
+    sendContactEmail: async (fromName, fromEmail, subject, message) => {
+        try {
+            return await resend.emails.send({
+                from: config.resend.from,
+                to: config.resend.contactEmail,
+                replyTo: fromEmail,
+                subject: `📩 Contato via Site: ${subject}`,
+                html: `
+                    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+                        <h2 style="color: #2563eb;">Novo contato recebido</h2>
+                        <p><strong>De:</strong> ${fromName} (${fromEmail})</p>
+                        <p><strong>Assunto:</strong> ${subject}</p>
+                        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+                        <p style="white-space: pre-line;">${message}</p>
+                    </div>
+                `
+            });
+        } catch (err) {
+            console.error('[EMAIL SERVICE] Erro ao enviar e-mail de contato:', err);
+            return { success: false, error: err };
+        }
     }
 };
 

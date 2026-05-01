@@ -186,6 +186,13 @@
 											>
 												👤 Meu Perfil
 											</a>
+											<a
+												href="/private/sobre"
+												class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-blue-600"
+												on:click={() => (showDropdown = false)}
+											>
+												ℹ️ Sobre o Sistema
+											</a>
 											<button
 												on:click={handleLogout}
 												class="flex w-full items-center gap-2 px-4 py-2 text-sm text-red-600 transition-colors hover:bg-red-50"
