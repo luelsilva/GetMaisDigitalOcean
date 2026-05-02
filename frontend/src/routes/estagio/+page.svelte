@@ -197,12 +197,13 @@
             {#each $menuStore as section, i (section.code)}
                 <div 
                     in:fly={{ y: 20, duration: 400, delay: i * 50 }}
-                    class="flex flex-col rounded-3xl border border-gray-100 shadow-xl overflow-hidden transition-all duration-300"
+                    class="flex flex-col rounded-3xl border border-gray-100 shadow-xl transition-all duration-300"
+                    class:z-50={openMenuId === section.id || section.items?.some(item => openItemMenuId === item.id)}
                     style="background-color: {section.colorLight};"
                 >
                     <!-- Header do Card -->
                     <div 
-                        class="px-6 py-5 border-b border-white/20 flex items-center justify-between relative"
+                        class="px-6 py-5 rounded-t-[calc(1.5rem-1px)] border-b border-white/20 flex items-center justify-between relative"
                         style="background-color: {section.colorDark};"
                     >
                         <h2 class="text-lg font-black text-white leading-tight">
