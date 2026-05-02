@@ -20,79 +20,113 @@
 
 	let pageConfig = $derived.by(() => {
 		const { mode, internship_status, user_role } = pageData;
+		const isProf = ['teacher', 'admin', 'sudo'].includes(user_role);
 
 		let config = {
 			message: '',
-			canSave: true,
-			canPDF: true,
-			canSubmitForApproval: mode === 'edit' && internship_status === 'DRAFT',
+			canSave: false,
+			canPDF: false,
+			canSubmitForApproval: false,
 			canApprove: false,
 			canReject: false,
-			readonly: false,
-			saveLabel: mode === 'new' ? 'Salvar Estágio' : 'Atualizar Estágio',
+			canStart: false,
+			canFinish: false,
+			readonly: true,
+			saveLabel: mode === 'new' ? 'Salvar Estágio' : 'Atualizar Estágio'
 		};
 
 		if (mode === 'new') {
-			config.canPDF = false; // Somente o botão Salvar Estágio deve aparecer no modo criação
+			config.canSave = true;
+			config.readonly = false;
 			config.message = `
-				<p class="text-lg font-bold text-slate-800">Este documento está no modo de CRIAÇÃO.</p>
+				<p class="text-lg font-bold text-slate-800">Este TCE está no modo de CRIAÇÃO.</p>
 				<p class="text-lg font-bold text-slate-800">Após preencher os campos clique em salvar estágio.</p>
 			`;
 			return config;
 		}
 
-		// Mensagens padrão para modo de edição
-		let title = 'Este documento está no modo de EDIÇÃO.';
-		let subtitle = 'Após editar os campos clique em atualizar estágio.';
+		// --- MODO EDIÇÃO (mode === 'edit') ---
 
-		// Customização baseada em status e role
-		if (internship_status === 'FINISHED') {
-			title = 'Este TCE está <span class="text-emerald-600">FINALIZADO</span>.';
-			subtitle = 'O documento não pode mais ser alterado.';
-			config.canSave = false;
-			config.readonly = true;
-		} else if (internship_status === 'APPROVED') {
-			title = 'Este TCE está <span class="text-indigo-600">APROVADO</span>.';
-			subtitle = 'Agora você pode gerar o PDF para imprimir.';
-			config.canSave = false;
-			config.readonly = true;
-		} else if (internship_status === 'STARTED') {
-			title = 'Este estágio já foi iniciado.';
-			subtitle = 'O documento não pode ser editado.';
-			config.canSave = false;
-			config.readonly = true;
+		if (internship_status === 'DRAFT') {
+			config.canSave = true;
+			config.canPDF = true;
+			config.readonly = false;
+			if (isProf) {
+				config.canApprove = true;
+				config.canReject = true; // "Devolver"
+				config.message = `
+					<p class="text-lg font-bold text-slate-800">Professor, este TCE está no modo de EDIÇÃO.</p>
+					<p class="text-lg font-bold text-slate-800">Caso necessário, edite os campos e clique em Atualizar Estágio.</p>
+					<p class="text-lg font-bold text-slate-800">Se os campos foram totalmente preenchidos e o professor os aprova,</p>
+					<p class="text-lg font-bold text-slate-800">então clique em aprovar.</p>
+					<p class="text-lg font-bold text-slate-800">Caso contrário, devolva à empresa para que continue o preenchimento.</p>
+				`;
+			} else {
+				config.canSubmitForApproval = true;
+				config.message = `
+					<p class="text-lg font-bold text-slate-800">Este TCE está no modo de EDIÇÃO.</p>
+					<p class="text-lg font-bold text-slate-800">Após editar os campos clique em Atualizar Estágio.</p>
+					<p class="text-lg font-bold text-slate-800">Depois, clique em Enviar para o professor avaliar.</p>
+				`;
+			}
 		} else if (internship_status === 'WAITING_APPROVAL') {
-			title = 'Este TCE está <span class="text-amber-600">AGUARDANDO APROVAÇÃO</span>.';
-
-			if (user_role === 'company') {
-				subtitle = 'E no momento o documento não pode ser editado.';
-				config.canSave = false;
-				config.canPDF = false;
-				config.canSubmitForApproval = false;
-				config.readonly = true;
-			} else if (user_role === 'teacher' || user_role === 'admin' || user_role === 'sudo') {
-				subtitle = 'Professor, analize e faça as correções necessárias. </br> Se estiver tudo correto clique em aprovar. </br> Caso contrário clique em reprovar.';
+			if (isProf) {
+				config.canSave = true;
+				config.canPDF = true;
 				config.canApprove = true;
 				config.canReject = true;
-				config.readonly = false; // Professor pode editar para corrigir
+				config.readonly = false;
+				config.message = `
+					<p class="text-lg font-bold text-slate-800">Professor, este TCE está AGUARDANDO APROVAÇÃO.</p>
+					<p class="text-lg font-bold text-slate-800">Caso necessário, edite os campos e clique em Atualizar Estágio.</p>
+					<p class="text-lg font-bold text-slate-800">Se os campos foram totalmente preenchidos e o professor os aprova,</p>
+					<p class="text-lg font-bold text-slate-800">então clique em aprovar.</p>
+					<p class="text-lg font-bold text-slate-800">Caso contrário, devolva à empresa para que continue o preenchimento.</p>
+				`;
+			} else {
+				config.message = `
+					<p class="text-lg font-bold text-slate-800">Este TCE está AGUARDANDO APROVAÇÃO.</p>
+					<p class="text-lg font-bold text-slate-800">No momento não pode ser editado.</p>
+				`;
 			}
+		} else if (internship_status === 'APPROVED') {
+			config.canPDF = true;
+			if (isProf) {
+				config.canStart = true;
+				config.message = `
+					<p class="text-lg font-bold text-slate-800">Este TCE está APROVADO. Agora você pode gerar o PDF para imprimir.</p>
+					<p class="text-lg font-bold text-slate-800">Professor, se o estágio já foi iniciado, clique em Estágio Iniciado.</p>
+				`;
+			} else {
+				config.message = `
+					<p class="text-lg font-bold text-slate-800">Este TCE está APROVADO.</p>
+					<p class="text-lg font-bold text-slate-800">Agora você pode gerar o PDF para imprimir.</p>
+				`;
+			}
+		} else if (internship_status === 'STARTED') {
+			config.canPDF = true;
+			if (isProf) {
+				config.canFinish = true;
+				config.message = `
+					<p class="text-lg font-bold text-slate-800">Este estágio foi INICIADO.</p>
+					<p class="text-lg font-bold text-slate-800">Professor, se o estágio já finalizou, clique em Estágio Finalizado.</p>
+				`;
+			} else {
+				config.message = `
+					<p class="text-lg font-bold text-slate-800">Este estágio foi INICIADO.</p>
+				`;
+			}
+		} else if (internship_status === 'FINISHED') {
+			config.canPDF = true;
+			config.message = `
+				<p class="text-lg font-bold text-slate-800">Este estágio está FINALIZADO.</p>
+			`;
+		} else if (internship_status === 'ARCHIVED') {
+			config.canPDF = true;
+			config.message = `
+				<p class="text-lg font-bold text-slate-800">Este TCE foi ARQUIVADO.</p>
+			`;
 		}
-
-		// Se for professor, independente do status (exceto finished), ele pode ter as ações de aprovação se estiver aguardando
-		if (
-			(user_role === 'teacher' || user_role === 'admin' || user_role === 'sudo') &&
-			internship_status === 'WAITING_APPROVAL'
-		) {
-			subtitle = 'Professor, analize e faça as correções necessárias. </br> Se estiver tudo correto clique em aprovar. </br> Caso contrário clique em reprovar.';
-			config.canApprove = true;
-			config.canReject = true;
-			config.readonly = false;
-		}
-
-		config.message = `
-			<p class="text-lg font-bold text-slate-800">${title}</p>
-			<p class="text-lg font-bold text-slate-800">${subtitle}</p>
-		`;
 
 		return config;
 	});
@@ -102,8 +136,6 @@
 
 	let saving = $state(false);
 	let formModified = $state(false);
-
-
 
 	let showSaveResultModal = $state(false);
 	let showValidationModal = $state(false);
@@ -119,14 +151,6 @@
 			window.location.href = `/gotce/v2?id=${lastSavedId}`;
 		}
 	});
-
-
-
-
-
-
-
-
 
 	function markAsModified() {
 		formModified = true;
@@ -578,6 +602,10 @@
 			alert('Por favor, selecione o Curso antes de salvar.');
 			return false;
 		}
+		if (!formValues['nome_professor'] && !formValues['NomeProfessor']) {
+			alert('Por favor, selecione o Professor antes de salvar.');
+			return false;
+		}
 
 		saving = true;
 
@@ -617,8 +645,6 @@
 				internshipData.studentRegistration = Number(internshipData.studentRegistration);
 			}
 
-			
-
 			let response;
 			if (pageData.mode === 'edit' && pageData.internship) {
 				response = await apiFetch(`/internships/${pageData.internship.id}`, {
@@ -636,11 +662,10 @@
 				formModified = false;
 				const savedData = await response.json();
 
-			
 				if (!silent) {
 					showSaveResultModal = true;
 				}
-				
+
 				lastSavedId = savedData.id;
 				return true;
 			} else {
@@ -750,7 +775,6 @@
 				data: dataToSubmit
 			};
 
-			
 			const endpoint = type === 'pdf' ? '/documentos/gerar-pdf' : '/documentos/gerar-docx';
 
 			const res = await apiFetch(
@@ -760,7 +784,7 @@
 					body: JSON.stringify(payload)
 				},
 				60000
-			); 
+			);
 
 			if (res.ok) {
 				const blob = await res.blob();
@@ -817,7 +841,6 @@
 			});
 
 			if (response.ok) {
-
 				alert('Enviado para avaliação com sucesso!');
 				window.location.reload();
 			} else {
@@ -848,15 +871,21 @@
 
 			if (response.ok) {
 				// Envia email de aprovação para a empresa (endpoint já faz join com profiles e loga o email)
-				const notifyRes = await apiFetch(`/internships/${pageData.internship.id}/notificar-aprovacao`, {
-					method: 'POST'
-				});
+				const notifyRes = await apiFetch(
+					`/internships/${pageData.internship.id}/notificar-aprovacao`,
+					{
+						method: 'POST'
+					}
+				);
 
 				if (notifyRes.ok) {
 					alert('Estágio aprovado com sucesso! Um e-mail foi enviado para a empresa.');
 				} else {
 					const notifyErr = await notifyRes.json();
-					alert('Estágio aprovado, mas houve um erro ao enviar o e-mail: ' + (notifyErr.error || 'Erro desconhecido'));
+					alert(
+						'Estágio aprovado, mas houve um erro ao enviar o e-mail: ' +
+							(notifyErr.error || 'Erro desconhecido')
+					);
 				}
 				window.location.reload();
 			} else {
@@ -891,16 +920,22 @@
 
 			if (response.ok) {
 				// Envia email de reprovação com as observações do professor
-				const notifyRes = await apiFetch(`/internships/${pageData.internship.id}/notificar-reprovacao`, {
-					method: 'POST',
-					body: JSON.stringify({ observations: rejectObservations })
-				});
+				const notifyRes = await apiFetch(
+					`/internships/${pageData.internship.id}/notificar-reprovacao`,
+					{
+						method: 'POST',
+						body: JSON.stringify({ observations: rejectObservations })
+					}
+				);
 
 				if (notifyRes.ok) {
 					alert('Estágio devolvido para revisão! Um e-mail foi enviado para a empresa.');
 				} else {
 					const notifyErr = await notifyRes.json();
-					alert('Estágio devolvido, mas houve um erro ao enviar o e-mail: ' + (notifyErr.error || 'Erro desconhecido'));
+					alert(
+						'Estágio devolvido, mas houve um erro ao enviar o e-mail: ' +
+							(notifyErr.error || 'Erro desconhecido')
+					);
 				}
 				window.location.reload();
 			} else {
@@ -910,6 +945,60 @@
 		} catch (err) {
 			console.error(err);
 			alert('Erro de conexão ao reprovar.');
+		} finally {
+			submitting = false;
+		}
+	}
+
+	async function handleStart() {
+		if (!confirm('Deseja marcar este estágio como INICIADO?')) return;
+		submitting = true;
+		try {
+			const response = await apiFetch(`/internships/${pageData.internship.id}`, {
+				method: 'PUT',
+				body: JSON.stringify({
+					...pageData.internship,
+					jsonData: formValues,
+					status: 'STARTED'
+				})
+			});
+			if (response.ok) {
+				alert('Estágio iniciado com sucesso!');
+				window.location.reload();
+			} else {
+				const err = await response.json();
+				alert('Erro ao iniciar estágio: ' + (err.message || 'Erro desconhecido'));
+			}
+		} catch (err) {
+			console.error(err);
+			alert('Erro de conexão.');
+		} finally {
+			submitting = false;
+		}
+	}
+
+	async function handleFinish() {
+		if (!confirm('Deseja marcar este estágio como FINALIZADO?')) return;
+		submitting = true;
+		try {
+			const response = await apiFetch(`/internships/${pageData.internship.id}`, {
+				method: 'PUT',
+				body: JSON.stringify({
+					...pageData.internship,
+					jsonData: formValues,
+					status: 'FINISHED'
+				})
+			});
+			if (response.ok) {
+				alert('Estágio finalizado com sucesso!');
+				window.location.reload();
+			} else {
+				const err = await response.json();
+				alert('Erro ao finalizar estágio: ' + (err.message || 'Erro desconhecido'));
+			}
+		} catch (err) {
+			console.error(err);
+			alert('Erro de conexão.');
 		} finally {
 			submitting = false;
 		}
@@ -934,19 +1023,14 @@
 			<h3 class="text-xl font-black text-slate-800">Documento salvo com sucesso!</h3>
 		</div>
 
-
-
 		<!-- Botões contextuais -->
 		<div class="flex flex-col gap-3">
-			<button
-					onclick={handleCloseModal}
-					class="btn-action w-full bg-slate-700 hover:bg-slate-800"
-				>
-					OK
-				</button>
-			</div>
+			<button onclick={handleCloseModal} class="btn-action w-full bg-slate-700 hover:bg-slate-800">
+				OK
+			</button>
 		</div>
-	</Modal>
+	</div>
+</Modal>
 
 <!-- Modal de Validação de Pendências -->
 <Modal bind:show={showValidationModal}>
@@ -987,7 +1071,7 @@
 		</button>
 
 		<div class="mt-8 border-t border-slate-100 pt-6 text-center">
-			<p class="mb-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+			<p class="mb-1 text-[10px] font-bold tracking-widest text-slate-400 uppercase">
 				E-mail do Professor Orientador
 			</p>
 			<p class="text-sm font-medium text-slate-600">
@@ -997,15 +1081,13 @@
 			<button
 				type="button"
 				onclick={executeSubmission}
-				class="btn-action mt-6 w-full bg-amber-600 hover:bg-amber-700 text-white"
+				class="btn-action mt-6 w-full bg-amber-600 text-white hover:bg-amber-700"
 			>
 				Desejo enviar mesmo com pendências
 			</button>
 		</div>
 	</div>
 </Modal>
-
-
 
 <svelte:head>
 	<title>{form?.titulo || 'Carregando...'} | Cedup</title>
@@ -1221,7 +1303,39 @@
 								{#if submitting}
 									<span class="mr-2 animate-spin">🌀</span> Processando...
 								{:else}
-									❌ Reprovar / Devolver
+									❌ Devolver
+								{/if}
+							</button>
+						{/if}
+
+						{#if pageConfig.canStart}
+							<button
+								type="button"
+								onclick={handleStart}
+								disabled={submitting || saving}
+								class="btn-submit flex-1"
+								style="background-color: #2563eb"
+							>
+								{#if submitting}
+									<span class="mr-2 animate-spin">🌀</span> Processando...
+								{:else}
+									🚀 Estágio Iniciado
+								{/if}
+							</button>
+						{/if}
+
+						{#if pageConfig.canFinish}
+							<button
+								type="button"
+								onclick={handleFinish}
+								disabled={submitting || saving}
+								class="btn-submit flex-1"
+								style="background-color: #059669"
+							>
+								{#if submitting}
+									<span class="mr-2 animate-spin">🌀</span> Processando...
+								{:else}
+									🏁 Estágio Finalizado
 								{/if}
 							</button>
 						{/if}
@@ -1262,8 +1376,6 @@
 			</form>
 		</div>
 	</div>
-
-
 {:else}
 	<div class="flex min-h-[70vh] items-center justify-center">
 		<p class="animate-pulse text-gray-500">Carregando formulário...</p>
@@ -1280,17 +1392,19 @@
 		<div class="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-red-50">
 			<span class="text-3xl">❌</span>
 		</div>
-		<h3 class="text-xl font-black text-slate-800 uppercase tracking-tight">Devolver para Revisão</h3>
+		<h3 class="text-xl font-black tracking-tight text-slate-800 uppercase">
+			Devolver para Revisão
+		</h3>
 	</div>
 	<div class="px-6 pb-2">
-		<p class="text-base font-semibold text-slate-700 mb-3 text-center">
+		<p class="mb-3 text-center text-base font-semibold text-slate-700">
 			✏️ Professor, informe quais correções a empresa precisa fazer no TCE?
 		</p>
 		<textarea
 			bind:value={rejectObservations}
 			rows="5"
 			placeholder="Ex: O CPF da empresa está incorreto. Verifique também as datas do estágio..."
-			class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 placeholder-slate-400 outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100 resize-none transition"
+			class="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 placeholder-slate-400 transition outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100"
 		></textarea>
 		<p class="mt-2 text-xs text-slate-400">
 			* As orientações serão enviadas por e-mail para a empresa junto com o aviso de devolução.
@@ -1308,7 +1422,7 @@
 			type="button"
 			onclick={executeReject}
 			disabled={!rejectObservations.trim()}
-			class="flex-[1.5] rounded-2xl bg-red-600 px-5 py-3 text-sm font-black text-white shadow-lg transition hover:bg-red-700 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-red-600 disabled:active:scale-100"
+			class="flex-[1.5] rounded-2xl bg-red-600 px-5 py-3 text-sm font-black text-white shadow-lg transition hover:bg-red-700 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-red-600 disabled:active:scale-100"
 		>
 			Confirmar Devolução
 		</button>

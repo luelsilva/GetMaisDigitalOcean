@@ -1,0 +1,12 @@
+STATUS,ROLE,INSTRUÇÕES,BOTÕES ATIVOS
+NEW,"company, teacher, admin, sudo",Este TCE está no modo de CRIAÇÃO. Após preencher os campos clique em salvar estágio.,Salvar Estágio
+DRAFT,company,"Este TCE está no modo de EDIÇÃO. Após editar os campos clique em Atualizar Estágio. Após isso, clique em Enviar para o professor avaliar.","Atualizar Estágio, Enviar para Avaliar, Gerar PDF"
+DRAFT,"teacher, admin, sudo","Professor, este TCE está no modo de EDIÇÃO. Caso necessário, edite os campos e clique em Atualizar Estágio. Se os campos foram totalmente preenchidos e o professor os aprova, então clique em aprovar. Caso contrário, devolva a empresa para que continue o preenchimento.","Atualizar Estágio, Aprovar, Devolver, Gerar PDF"
+WAITING_APPROVAL,company,Este TCE está AGUARDANDO APROVAÇÃO. No momento não pode ser editado.,
+WAITING_APPROVAL,"teacher, admin, sudo","Professor, este TCE está AGUARDANDO APROVAÇÃO. Caso necessário, edite os campos e clique em Atualizar Estágio. Se os campos foram totalmente preenchidos e o professor os aprova, então clique em aprovar. Caso contrário, devolva a empresa para que continue o preenchimento.","Atualizar Estágio, Aprovar, Devolver, Gerar PDF"
+APPROVED,company,Este TCE está APROVADO. Agora você pode gerar o PDF para imprimir.,Gerar PDF
+APPROVED,"teacher, admin, sudo","Este TCE está APROVADO. Agora você pode gerar o PDF para imprimir. Professor, se o estágio já foi iniciado, clique em Estágio Iniciado.","Gerar PDF, Estágio Iniciado"
+STARTED,company,Este estágio foi INICIADO.,Gerar PDF
+STARTED,"teacher, admin, sudo","Este estágio foi INICIADO. Professor, se o estágio já finalizou, clique em Estágio Finalizado.","Gerar PDF, Estágio Finalizado"
+FINISHED,"company, teacher, admin, sudo",Este estágio está FINALIZADO.,Gerar PDF
+ARCHIVED,"company, teacher, admin, sudo",Este TCE foi ARQUIVADO.,Gerar PDF
