@@ -39,42 +39,51 @@
 			config.canSave = true;
 			config.readonly = false;
 			config.message = `
-				<p class="text-lg font-bold text-slate-800">Este TCE está no modo de CRIAÇÃO.</p>
-				<p class="text-lg font-bold text-slate-800">Após preencher os campos clique em salvar estágio.</p>
+				<p class="text-lg font-bold text-slate-800">Este TCE encontra-se em criação.</p>
+				<p class="text-lg font-bold text-slate-800">Preencha os dados solicitados e clique em Salvar Estágio.</p>
 			`;
 			return config;
 		}
 
-		// --- MODO EDIÇÃO (mode === 'edit') ---
+		// --- MODO EDIÇÃO ---
 
-		if (internship_status === 'DRAFT' || internship_status === 'DRAFT_BY_TEACHER') {
-			config.canSave = true;
+		if (internship_status === 'DRAFT_BY_TEACHER') {
 			config.canPDF = true;
-			config.readonly = false;
 			if (isProf) {
-				if (internship_status === 'DRAFT_BY_TEACHER') {
-					config.message = `
-						<p class="text-lg font-bold text-slate-800">Professor, este TCE recém criado, está no modo de EDIÇÃO.</p>
-						<p class="text-lg font-bold text-slate-800">Caso necessário, edite os campos e clique em Atualizar Estágio.</p>
-						<p class="text-lg font-bold text-slate-800">Agora você deve copiar o link que aparece na barra de endereços e enviar via e-mail para a empresa solicitante do termo.</p>
-					`;
-				} else {
-					config.canApprove = true;
-					config.canReject = true; // "Devolver"
-					config.message = `
-						<p class="text-lg font-bold text-slate-800">Professor, este TCE que está no modo de EDIÇÃO.</p>
-						<p class="text-lg font-bold text-slate-800">Caso necessário, edite os campos e clique em Atualizar Estágio.</p>
-						<p class="text-lg font-bold text-slate-800">Se os campos foram totalmente preenchidos e o professor os aprova,</p>
-						<p class="text-lg font-bold text-slate-800">então clique em aprovar.</p>
-						<p class="text-lg font-bold text-slate-800">Caso contrário, devolva à empresa para que continue o preenchimento.</p>
-					`;
-				}
-			} else {
-				config.canSubmitForApproval = true;
+				config.canSave = true;
+				config.readonly = false;
 				config.message = `
-					<p class="text-lg font-bold text-slate-800">Este TCE está no modo de EDIÇÃO.</p>
-					<p class="text-lg font-bold text-slate-800">Após editar os campos clique em Atualizar Estágio.</p>
-					<p class="text-lg font-bold text-slate-800">Depois, clique em Enviar para o professor avaliar.</p>
+					<p class="text-lg font-bold text-slate-800">Professor, o TCE está em modo de edição.</p>
+					<p class="text-lg font-bold text-slate-800">Copie o link da barra de endereços e envie-o à empresa para preenchimento.</p>
+				`;
+			} else {
+				config.canSave = true;
+				config.canSubmitForApproval = true;
+				config.readonly = false;
+				config.message = `
+					<p class="text-lg font-bold text-slate-800">O TCE encontra-se em edição.</p>
+					<p class="text-lg font-bold text-slate-800">Preencha os dados solicitados e clique em Atualizar Estágio. Depois, clique em Enviar para o professor avaliar.</p>
+				`;
+			}
+		} else if (internship_status === 'DRAFT') {
+			config.canPDF = true;
+			if (isProf) {
+				config.canSave = true;
+				config.canStart = true;
+				config.canFinish = true;
+				config.readonly = false;
+				config.message = `
+					<p class="text-lg font-bold text-slate-800">Professor, este TCE está sendo editado pela empresa e posterior envio para avaliação.</p>
+					<p class="text-lg font-bold text-slate-800">Caso esteja fora do prazo, por favor, verifique a situação e adote as providências pertinentes.</p>
+					<p class="text-lg font-bold text-slate-800">Se necessário, altere o status do TCE para Iniciado ou Finalizado.</p>
+				`;
+			} else {
+				config.canSave = true;
+				config.canSubmitForApproval = true;
+				config.readonly = false;
+				config.message = `
+					<p class="text-lg font-bold text-slate-800">O TCE encontra-se em edição.</p>
+					<p class="text-lg font-bold text-slate-800">Preencha os dados solicitados e clique em Atualizar Estágio. Depois, clique em Enviar para o professor avaliar.</p>
 				`;
 			}
 		} else if (internship_status === 'WAITING_APPROVAL') {
@@ -85,54 +94,73 @@
 				config.canReject = true;
 				config.readonly = false;
 				config.message = `
-					<p class="text-lg font-bold text-slate-800">Professor, este TCE está AGUARDANDO APROVAÇÃO.</p>
-					<p class="text-lg font-bold text-slate-800">Caso necessário, edite os campos e clique em Atualizar Estágio.</p>
-					<p class="text-lg font-bold text-slate-800">Se os campos foram totalmente preenchidos e o professor os aprova,</p>
-					<p class="text-lg font-bold text-slate-800">então clique em aprovar.</p>
-					<p class="text-lg font-bold text-slate-800">Caso contrário, devolva à empresa para que continue o preenchimento.</p>
+					<p class="text-lg font-bold text-slate-800">Professor, o TCE aguarda sua aprovação.</p>
+					<p class="text-lg font-bold text-slate-800">Revise as informações e clique em Aprovar Estágio ou Devolver.</p>
 				`;
 			} else {
 				config.message = `
-					<p class="text-lg font-bold text-slate-800">Este TCE está AGUARDANDO APROVAÇÃO.</p>
-					<p class="text-lg font-bold text-slate-800">No momento não pode ser editado.</p>
+					<p class="text-lg font-bold text-slate-800">O TCE foi enviado para aprovação do professor.</p>
+					<p class="text-lg font-bold text-slate-800">Aguarde a avaliação.</p>
+				`;
+			}
+		} else if (internship_status === 'REVISION_REQUESTED') {
+			config.canPDF = true;
+			if (isProf) {
+				config.canStart = true;
+				config.canFinish = true;
+				config.readonly = true;
+				config.message = `
+					<p class="text-lg font-bold text-slate-800">Foi solicitada revisão deste TCE. Aguarde o reenvio pela empresa após as correções.</p>
+					<p class="text-lg font-bold text-slate-800">Caso esteja fora do prazo, por favor, verifique a situação e adote as providências pertinentes. Se necessário, altere o status do TCE para Iniciado ou Finalizado.</p>
+				`;
+			} else {
+				config.canSave = true;
+				config.canSubmitForApproval = true;
+				config.readonly = false;
+				config.message = `
+					<p class="text-lg font-bold text-slate-800">O TCE foi devolvido para correção.</p>
+					<p class="text-lg font-bold text-slate-800">Realize os ajustes solicitados e clique em Atualizar Estágio e envie para o professor avaliar.</p>
 				`;
 			}
 		} else if (internship_status === 'APPROVED') {
 			config.canPDF = true;
 			if (isProf) {
 				config.canStart = true;
+				config.canFinish = true;
+				config.readonly = true;
 				config.message = `
-					<p class="text-lg font-bold text-slate-800">Este TCE está APROVADO. Agora você pode gerar o PDF para imprimir.</p>
-					<p class="text-lg font-bold text-slate-800">Professor, se o estágio já foi iniciado, clique em Estágio Iniciado.</p>
+					<p class="text-lg font-bold text-slate-800">O TCE foi aprovado com sucesso. O estágio pode ser iniciado conforme o cronograma.</p>
+					<p class="text-lg font-bold text-slate-800">Se necessário, altere o status do TCE para Iniciado ou Finalizado.</p>
 				`;
 			} else {
 				config.message = `
-					<p class="text-lg font-bold text-slate-800">Este TCE está APROVADO.</p>
-					<p class="text-lg font-bold text-slate-800">Agora você pode gerar o PDF para imprimir.</p>
+					<p class="text-lg font-bold text-slate-800">O TCE foi aprovado.</p>
+					<p class="text-lg font-bold text-slate-800">Agora é possível gerar o documento oficial do estágio.</p>
 				`;
 			}
 		} else if (internship_status === 'STARTED') {
 			config.canPDF = true;
 			if (isProf) {
 				config.canFinish = true;
+				config.readonly = true;
 				config.message = `
-					<p class="text-lg font-bold text-slate-800">Este estágio foi INICIADO.</p>
-					<p class="text-lg font-bold text-slate-800">Professor, se o estágio já finalizou, clique em Estágio Finalizado.</p>
+					<p class="text-lg font-bold text-slate-800">O estágio foi iniciado. Acompanhe as atividades conforme previsto.</p>
+					<p class="text-lg font-bold text-slate-800">Se necessário, altere o status do TCE para Finalizado.</p>
 				`;
 			} else {
 				config.message = `
-					<p class="text-lg font-bold text-slate-800">Este estágio foi INICIADO.</p>
+					<p class="text-lg font-bold text-slate-800">O estágio encontra-se em andamento.</p>
 				`;
 			}
 		} else if (internship_status === 'FINISHED') {
 			config.canPDF = true;
 			config.message = `
-				<p class="text-lg font-bold text-slate-800">Este estágio está FINALIZADO.</p>
+				<p class="text-lg font-bold text-slate-800">O estágio foi ${isProf ? 'concluído com sucesso' : 'finalizado'}.</p>
 			`;
 		} else if (internship_status === 'ARCHIVED') {
 			config.canPDF = true;
 			config.message = `
-				<p class="text-lg font-bold text-slate-800">Este TCE foi ARQUIVADO.</p>
+				<p class="text-lg font-bold text-slate-800">Este TCE foi arquivado${isProf ? ' para registro institucional' : ' e não pode mais ser editado'}.</p>
 			`;
 		}
 
@@ -927,7 +955,7 @@
 				body: JSON.stringify({
 					...pageData.internship,
 					jsonData: formValues,
-					status: 'DRAFT'
+					status: 'REVISION_REQUESTED'
 				})
 			});
 
@@ -1247,14 +1275,14 @@
 					{/each}
 				</div>
 
-				<div class="mt-8 flex w-full flex-col items-center gap-4">
+				<div class="mt-8 flex w-full flex-col items-center gap-4 rounded-2xl border border-slate-100 bg-slate-50/50 p-6">
 					<div
-						class="flex w-full max-w-2xl flex-col items-center gap-1 border-t border-b border-gray-100 py-4 text-center"
+						class="flex w-full flex-col items-center gap-1 rounded-xl border border-amber-100 bg-amber-50 p-4 text-center shadow-sm"
 					>
 						{@html pageConfig.message}
 					</div>
 
-					<div class="flex w-full max-w-2xl flex-col gap-4 sm:flex-row">
+					<div class="flex w-full flex-col gap-4 p-2 sm:flex-row">
 						{#if pageConfig.canSave}
 							<button
 								type="button"
@@ -1332,7 +1360,7 @@
 								{#if submitting}
 									<span class="mr-2 animate-spin">🌀</span> Processando...
 								{:else}
-									🚀 Estágio Iniciado
+									🚀 Alterar status para Iniciado
 								{/if}
 							</button>
 						{/if}
@@ -1348,7 +1376,7 @@
 								{#if submitting}
 									<span class="mr-2 animate-spin">🌀</span> Processando...
 								{:else}
-									🏁 Estágio Finalizado
+									🏁 Alterar status para Finalizado
 								{/if}
 							</button>
 						{/if}
