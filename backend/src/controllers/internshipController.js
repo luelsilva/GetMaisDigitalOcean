@@ -276,7 +276,7 @@ exports.updateInternship = async (req, res, next) => {
             // BLOQUEIO DE EDIÇÃO PARA USUÁRIOS COMUNS:
             // Se não for autoridade e o estágio não estiver em edição (DRAFT/REVISION_REQUESTED),
             // permitir APENAS a mudança de status (ex: cancelar submissão voltando para DRAFT)
-            const isEditableState = ['DRAFT', 'REVISION_REQUESTED'].includes(oldStatus);
+            const isEditableState = ['DRAFT', 'DRAFT_BY_TEACHER', 'REVISION_REQUESTED'].includes(oldStatus);
             
             if (!isAuthority && !isEditableState && !isLocked) {
                 // Se tentou mudar qualquer campo que não seja 'status'
@@ -299,7 +299,7 @@ exports.updateInternship = async (req, res, next) => {
                 } 
                 // 2. Aluno/Empresa (Dono ou Empresa colaborando no preenchimento)
                 else if (isOwner || (userRole === 'company' && isEditableState)) {
-                    if ((oldStatus === 'DRAFT' || oldStatus === 'REVISION_REQUESTED') && newStatus === 'WAITING_APPROVAL') {
+                    if (['DRAFT', 'DRAFT_BY_TEACHER', 'REVISION_REQUESTED'].includes(oldStatus) && newStatus === 'WAITING_APPROVAL') {
                         allowed = true;
                     }
                     // Permitir voltar para DRAFT se ainda não foi aprovado? 

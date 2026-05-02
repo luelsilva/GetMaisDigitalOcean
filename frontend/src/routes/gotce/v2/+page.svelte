@@ -47,20 +47,28 @@
 
 		// --- MODO EDIÇÃO (mode === 'edit') ---
 
-		if (internship_status === 'DRAFT') {
+		if (internship_status === 'DRAFT' || internship_status === 'DRAFT_BY_TEACHER') {
 			config.canSave = true;
 			config.canPDF = true;
 			config.readonly = false;
 			if (isProf) {
-				config.canApprove = true;
-				config.canReject = true; // "Devolver"
-				config.message = `
-					<p class="text-lg font-bold text-slate-800">Professor, este TCE está no modo de EDIÇÃO.</p>
-					<p class="text-lg font-bold text-slate-800">Caso necessário, edite os campos e clique em Atualizar Estágio.</p>
-					<p class="text-lg font-bold text-slate-800">Se os campos foram totalmente preenchidos e o professor os aprova,</p>
-					<p class="text-lg font-bold text-slate-800">então clique em aprovar.</p>
-					<p class="text-lg font-bold text-slate-800">Caso contrário, devolva à empresa para que continue o preenchimento.</p>
-				`;
+				if (internship_status === 'DRAFT_BY_TEACHER') {
+					config.message = `
+						<p class="text-lg font-bold text-slate-800">Professor, este TCE recém criado, está no modo de EDIÇÃO.</p>
+						<p class="text-lg font-bold text-slate-800">Caso necessário, edite os campos e clique em Atualizar Estágio.</p>
+						<p class="text-lg font-bold text-slate-800">Agora você deve copiar o link que aparece na barra de endereços e enviar via e-mail para a empresa solicitante do termo.</p>
+					`;
+				} else {
+					config.canApprove = true;
+					config.canReject = true; // "Devolver"
+					config.message = `
+						<p class="text-lg font-bold text-slate-800">Professor, este TCE que está no modo de EDIÇÃO.</p>
+						<p class="text-lg font-bold text-slate-800">Caso necessário, edite os campos e clique em Atualizar Estágio.</p>
+						<p class="text-lg font-bold text-slate-800">Se os campos foram totalmente preenchidos e o professor os aprova,</p>
+						<p class="text-lg font-bold text-slate-800">então clique em aprovar.</p>
+						<p class="text-lg font-bold text-slate-800">Caso contrário, devolva à empresa para que continue o preenchimento.</p>
+					`;
+				}
 			} else {
 				config.canSubmitForApproval = true;
 				config.message = `
@@ -637,7 +645,12 @@
 					formValues['dt_fim'] || formValues['data_final'] || formValues['DataFinal']
 				),
 				jsonData: formValues,
-				status: pageData.mode === 'edit' ? pageData.internship_status : 'DRAFT'
+				status:
+					pageData.mode === 'edit'
+						? pageData.internship_status
+						: ['teacher', 'admin', 'sudo'].includes(pageData.user_role)
+							? 'DRAFT_BY_TEACHER'
+							: 'DRAFT'
 			};
 
 			// Converter matrícula para número se existir
