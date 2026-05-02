@@ -62,7 +62,8 @@
 				config.readonly = false;
 				config.message = `
 					<p class="text-lg font-bold text-slate-800">O TCE encontra-se em edição.</p>
-					<p class="text-lg font-bold text-slate-800">Preencha os dados solicitados e clique em Atualizar Estágio. Depois, clique em Enviar para o professor avaliar.</p>
+					<p class="text-lg font-bold text-slate-800">Preencha os dados solicitados e clique em Atualizar Estágio.</p>
+					<p class="text-lg font-bold text-slate-800">Depois, clique em Enviar para o professor avaliar.</p>
 				`;
 			}
 		} else if (internship_status === 'DRAFT') {
@@ -83,7 +84,8 @@
 				config.readonly = false;
 				config.message = `
 					<p class="text-lg font-bold text-slate-800">O TCE encontra-se em edição.</p>
-					<p class="text-lg font-bold text-slate-800">Preencha os dados solicitados e clique em Atualizar Estágio. Depois, clique em Enviar para o professor avaliar.</p>
+					<p class="text-lg font-bold text-slate-800">Preencha os dados solicitados e clique em Atualizar Estágio.<p>
+					<p class="text-lg font-bold text-slate-800">Depois, clique em Enviar para o professor avaliar.</p>
 				`;
 			}
 		} else if (internship_status === 'WAITING_APPROVAL') {
@@ -106,12 +108,14 @@
 		} else if (internship_status === 'REVISION_REQUESTED') {
 			config.canPDF = true;
 			if (isProf) {
+				config.canSave = true;
 				config.canStart = true;
 				config.canFinish = true;
-				config.readonly = true;
+				config.readonly = false;
 				config.message = `
 					<p class="text-lg font-bold text-slate-800">Foi solicitada revisão deste TCE. Aguarde o reenvio pela empresa após as correções.</p>
-					<p class="text-lg font-bold text-slate-800">Caso esteja fora do prazo, por favor, verifique a situação e adote as providências pertinentes. Se necessário, altere o status do TCE para Iniciado ou Finalizado.</p>
+					<p class="text-lg font-bold text-slate-800">Caso esteja fora do prazo, por favor, verifique a situação e adote as providências pertinentes.</p>
+					<p class="text-lg font-bold text-slate-800">Se necessário, altere o status do TCE para Iniciado ou Finalizado.</p>
 				`;
 			} else {
 				config.canSave = true;
@@ -998,8 +1002,6 @@
 			const response = await apiFetch(`/internships/${pageData.internship.id}`, {
 				method: 'PUT',
 				body: JSON.stringify({
-					...pageData.internship,
-					jsonData: formValues,
 					status: 'STARTED'
 				})
 			});
@@ -1025,8 +1027,6 @@
 			const response = await apiFetch(`/internships/${pageData.internship.id}`, {
 				method: 'PUT',
 				body: JSON.stringify({
-					...pageData.internship,
-					jsonData: formValues,
 					status: 'FINISHED'
 				})
 			});
@@ -1047,7 +1047,6 @@
 
 	function handleCloseModal() {
 		showSaveResultModal = false;
-		showSavedModal = false;
 	}
 </script>
 

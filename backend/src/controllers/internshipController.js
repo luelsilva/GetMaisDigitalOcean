@@ -265,8 +265,13 @@ exports.updateInternship = async (req, res, next) => {
             // Se o estágio já está APROVADO ou STARTED, ninguém (nem sudo) pode mudar os DADOS (jsonData, nomes, etc).
             // Só permitimos mudar o STATUS (ex: de STARTED para FINISHED, se houver esse status no futuro).
             if (isLocked) {
-                const dataFieldsBeingUpdated = Object.keys(updateSet).filter(k => k !== 'status' && k !== 'updatedAt' && k !== 'lastModifiedBy');
-                if (dataFieldsBeingUpdated.length > 0) {
+                // Se o estágio está travado, removemos do updateSet campos de dados para permitir 
+                // a mudança de status mesmo que o frontend envie o objeto completo (jsonData, etc).
+                const dataFields = ['jsonData', 'studentRegistration', 'studentName', 'courseSigla', 'companyName', 'startDate', 'endDate', 'companyId'];
+                dataFields.forEach(field => delete updateSet[field]);
+
+                const forbiddenFields = Object.keys(updateSet).filter(k => k !== 'status' && k !== 'updatedAt' && k !== 'lastModifiedBy');
+                if (forbiddenFields.length > 0) {
                     return res.status(403).json({ 
                         error: `Este estágio já foi ${oldStatus} e seus dados não podem mais ser modificados por ninguém.` 
                     });

@@ -18,7 +18,15 @@
 		jsonData: any;
 		createdAt: string;
 		updatedAt: string;
-		status: 'DRAFT' | 'WAITING_APPROVAL' | 'REVISION_REQUESTED' | 'APPROVED' | 'STARTED' | 'FINISHED';
+		status:
+			| 'DRAFT'
+			| 'DRAFT_BY_TEACHER'
+			| 'WAITING_APPROVAL'
+			| 'REVISION_REQUESTED'
+			| 'APPROVED'
+			| 'STARTED'
+			| 'FINISHED'
+			| 'ARCHIVED';
 	}
 
 	interface Teacher {
@@ -40,10 +48,13 @@
 
 	const statusLabels: Record<string, string> = {
 		DRAFT: 'Editando',
+		DRAFT_BY_TEACHER: 'Rascunho Professor',
 		WAITING_APPROVAL: 'Aguardando Aprovação',
+		REVISION_REQUESTED: 'Revisão Solicitada',
 		APPROVED: 'Aprovado',
 		STARTED: 'Estagiando',
-		FINISHED: 'Finalizado'
+		FINISHED: 'Finalizado',
+		ARCHIVED: 'Arquivado'
 	};
 
 	function toggleStatus(status: string) {
@@ -311,6 +322,24 @@
 
 				<div class="flex-grow"></div>
 
+				<div class="flex items-center gap-3">
+					<span class="whitespace-nowrap text-xs font-black tracking-tight text-slate-400"
+						>Itens por Página:</span
+					>
+					<select
+						bind:value={pageSize}
+						onchange={handlePageSizeChange}
+						class="cursor-pointer rounded-xl border border-slate-200 bg-white py-2 pl-3 pr-10 text-sm font-bold text-slate-700 outline-none transition-all hover:border-indigo-300 focus:ring-2 focus:ring-indigo-500"
+					>
+						<option value={10}>10</option>
+						<option value={25}>25</option>
+						<option value={50}>50</option>
+						<option value={100}>100</option>
+					</select>
+				</div>
+
+				<div class="h-8 w-px bg-slate-200"></div>
+
 				<button
 					onclick={triggerSearch}
 					class="flex items-center gap-2 rounded-xl bg-indigo-600 px-8 py-2 text-sm font-black text-white transition-all hover:bg-indigo-700 active:scale-95 disabled:opacity-50"
@@ -332,19 +361,6 @@
 					{/if}
 					Pesquisar
 				</button>
-
-				<div class="h-8 w-px bg-slate-200"></div>
-
-				<select
-					bind:value={pageSize}
-					onchange={handlePageSizeChange}
-					class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
-				>
-					<option value={10}>10</option>
-					<option value={25}>25</option>
-					<option value={50}>50</option>
-					<option value={100}>100</option>
-				</select>
 			</div>
 		</header>
 
@@ -468,6 +484,12 @@
 											>
 												Editando
 											</span>
+										{:else if item.status === 'DRAFT_BY_TEACHER'}
+											<span
+												class="inline-flex items-center rounded-full border border-purple-200 bg-purple-100 px-2.5 py-0.5 text-[10px] font-black tracking-tight text-purple-700 uppercase"
+											>
+												Rascunho Professor
+											</span>
 										{:else if item.status === 'WAITING_APPROVAL'}
 											<span
 												class="inline-flex items-center rounded-full border border-amber-200 bg-amber-100 px-2.5 py-0.5 text-[10px] font-black tracking-tight text-amber-700 uppercase"
@@ -478,7 +500,7 @@
 											<span
 												class="inline-flex items-center rounded-full border border-rose-200 bg-rose-100 px-2.5 py-0.5 text-[10px] font-black tracking-tight text-rose-700 uppercase"
 											>
-												Em Revisão
+												Revisão Solicitada
 											</span>
 										{:else if item.status === 'APPROVED'}
 											<span
@@ -498,6 +520,12 @@
 											>
 												Finalizado
 											</span>
+										{:else if item.status === 'ARCHIVED'}
+											<span
+												class="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-2.5 py-0.5 text-[10px] font-black tracking-tight text-slate-500 uppercase"
+											>
+												Arquivado
+											</span>
 										{:else}
 											<span
 												class="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-2.5 py-0.5 text-[10px] font-black tracking-tight text-slate-600 uppercase"
@@ -510,7 +538,7 @@
 									<td class="px-6 py-4 text-center">
 										<div class="flex items-center justify-center gap-2">
 											<a
-												href="/gotce?id={item.id}"
+												href="/gotce/v2?id={item.id}"
 												target="_blank"
 												class="group/btn rounded-lg p-2 text-slate-400 transition-colors hover:bg-amber-50 hover:text-amber-600"
 												title="Editar"
