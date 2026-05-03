@@ -1,5 +1,5 @@
 const { db } = require('../db');
-const { internships, profiles, emailLogs } = require('../db/schema');
+const { internships, internshipsHistory, profiles, emailLogs } = require('../db/schema');
 const { eq, desc, asc, or, ilike, sql, and, isNull, inArray } = require('drizzle-orm');
 const emailService = require('../services/emailService');
 const config = require('../config');
@@ -150,6 +150,47 @@ exports.getInternshipById = async (req, res, next) => {
         }
 
         res.json(result);
+    } catch (error) {
+        next(error);
+    }
+};
+
+// Obter histórico de um estágio
+exports.getInternshipHistory = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+
+        // Verificar permissões para company
+        if (req.user.roles === 'company') {
+            const [internship] = await db.select({ userId: internships.userId, companyId: internships.companyId })
+                .from(internships)
+                .where(eq(internships.id, id));
+
+            if (!internship) return res.status(404).json({ error: 'Estágio não encontrado' });
+
+            if (internship.userId !== req.user.id && internship.companyId !== req.user.id) {
+                return res.status(403).json({ error: 'Acesso negado ao histórico deste estágio.' });
+            }
+        }
+
+        const history = await db.select({
+            historyId: internshipsHistory.historyId,
+            operation: internshipsHistory.operation,
+            changedAt: internshipsHistory.changedAt,
+            status: internshipsHistory.status,
+            jsonData: internshipsHistory.jsonData,
+            studentName: internshipsHistory.studentName,
+            courseSigla: internshipsHistory.courseSigla,
+            modifierId: profiles.id,
+            modifierName: profiles.fullName,
+            modifierRole: profiles.roles
+        })
+        .from(internshipsHistory)
+        .leftJoin(profiles, eq(internshipsHistory.lastModifiedBy, profiles.id))
+        .where(eq(internshipsHistory.internshipId, id))
+        .orderBy(desc(internshipsHistory.changedAt));
+
+        res.json(history);
     } catch (error) {
         next(error);
     }

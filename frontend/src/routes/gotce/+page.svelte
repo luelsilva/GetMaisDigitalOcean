@@ -5,6 +5,7 @@
 	import { fade } from 'svelte/transition';
 	import { devNotes } from '$lib/stores/devNotes.svelte';
 	import Modal from '$lib/components/Modal.svelte';
+	import InternshipHistory from '$lib/components/InternshipHistory.svelte';
 
 	interface Props {
 		data: {
@@ -1232,6 +1233,12 @@
 					{/if}
 				</div>
 			</form>
+
+            {#if pageData.internship && pageData.internship.id}
+                <div class="w-full max-w-4xl mx-auto mt-8">
+                    <InternshipHistory internshipId={pageData.internship.id} />
+                </div>
+            {/if}
 		</div>
 	</div>
 

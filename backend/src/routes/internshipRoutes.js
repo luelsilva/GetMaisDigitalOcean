@@ -8,6 +8,7 @@ router.use(authenticateToken, authorizeRoles('company', 'teacher', 'admin', 'sud
 
 router.get('/', internshipController.getAllInternships);
 router.get('/:id', internshipController.getInternshipById);
+router.get('/:id/history', internshipController.getInternshipHistory);
 router.post('/', internshipController.createInternship);
 router.put('/:id', internshipController.updateInternship);
 router.delete('/:id', internshipController.deleteInternship);

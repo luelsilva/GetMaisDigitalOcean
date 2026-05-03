@@ -159,6 +159,26 @@ const emailLogs = pgTable('email_logs', {
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 });
 
+const internshipsHistory = pgTable('internships_history', {
+    historyId: uuid('history_id').primaryKey().defaultRandom(),
+    internshipId: uuid('internship_id').notNull(),
+    operation: varchar('operation', { length: 1 }).notNull(),
+    changedAt: timestamp('changed_at', { withTimezone: true }).notNull().defaultNow(),
+    userId: uuid('user_id'),
+    studentRegistration: bigint('student_registration', { mode: 'number' }),
+    studentName: text('student_name'),
+    courseSigla: text('course_sigla'),
+    companyId: uuid('company_id'),
+    companyName: text('company_name'),
+    startDate: date('start_date'),
+    endDate: date('end_date'),
+    jsonData: jsonb('json_data'),
+    createdAt: timestamp('created_at', { withTimezone: true }),
+    updatedAt: timestamp('updated_at', { withTimezone: true }),
+    lastModifiedBy: uuid('last_modified_by'),
+    status: internshipStatusEnum('status')
+});
+
 module.exports = {
     profiles,
     otpCodes,
@@ -170,6 +190,7 @@ module.exports = {
     courseTeachers,
     formModels,
     internships,
+    internshipsHistory,
     keepAlive,
     appSettings,
     emailLogs
