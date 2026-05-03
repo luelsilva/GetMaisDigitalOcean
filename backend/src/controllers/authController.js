@@ -497,6 +497,24 @@ const authController = {
         }
     },
 
+    // Verificar se um e-mail já está cadastrado (sem expor dados sensíveis)
+    checkEmail: async (req, res) => {
+        try {
+            const { email } = req.body;
+            const normalizedEmail = email.toLowerCase();
+
+            const [user] = await db.select({ id: profiles.id })
+                .from(profiles)
+                .where(and(eq(profiles.email, normalizedEmail), isNull(profiles.deletedAt)))
+                .limit(1);
+
+            res.status(200).json({ exists: !!user });
+        } catch (error) {
+            console.error('[AUTH] Erro ao verificar e-mail:', error);
+            res.status(500).json({ error: 'Erro ao verificar e-mail' });
+        }
+    },
+
     // Login ou Registro Automático de Empresa
     loginOrRegisterCompany: async (req, res) => {
         try {

@@ -6,7 +6,12 @@
 	import { fade } from 'svelte/transition';
 
 	// Propriedades (Svelte 5 Runes)
-	let email = $state('');
+	interface Props {
+		initialEmail?: string;
+	}
+	let { initialEmail = '' }: Props = $props();
+
+	let email = $state(initialEmail);
 	let password = $state('');
 	let rememberMe = $state(false);
 	let error = $state('');
@@ -14,6 +19,14 @@
 	let showPassword = $state(false);
 	let description = $state('Bem-vindo de volta!');
 	let backLink = $state('/');
+	let infoMessage = $state(initialEmail ? 'Identificamos que você alterou sua senha. Por favor, insira sua senha atual para continuar.' : '');
+
+	$effect(() => {
+		if (initialEmail) {
+			email = initialEmail;
+			infoMessage = 'Identificamos que você alterou sua senha. Por favor, insira sua senha atual para continuar.';
+		}
+	});
 
 	async function handleLogin(e: Event) {
 		e.preventDefault(); // IMPORTANTE: Impede o recarregamento da página e perda da URL
@@ -81,6 +94,12 @@
 	</div>
 
 	<form onsubmit={handleLogin} class="space-y-6">
+		{#if infoMessage}
+			<div class="rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm font-medium text-blue-700">
+				{infoMessage}
+			</div>
+		{/if}
+
 		<div>
 			<label for="email" class="mb-2 ml-1 block text-sm font-bold text-gray-700">Email</label>
 			<input

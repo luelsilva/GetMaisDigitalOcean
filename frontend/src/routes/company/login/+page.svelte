@@ -49,7 +49,7 @@
 			return;
 		}
 
-		// Passo 2: Se já pedimos o nome, validar e registrar/logar via rota específica
+		// Passo 2: Se já pedimos o nome, validar e registrar via rota específica
 		if (showNameField) {
 			if (!fullName) {
 				error = 'Por favor, preencha o nome completo.';
@@ -60,12 +60,11 @@
 				error = 'Por favor, insira o nome completo do responsável.';
 				return;
 			}
-
 			performLoginOrRegister();
 			return;
 		}
 
-		// Passo 1: Tentar login direto apenas com o email (assumindo senha = email)
+		// Passo 1: Tentar login direto com senha = email
 		isLoading = true;
 		error = '';
 
@@ -79,18 +78,36 @@
 			});
 
 			if (response.ok) {
+				// Login bem-sucedido (usuário ainda tem senha = email)
 				const data = await response.json();
 				handleAuthSuccess(data);
-			} else {
-				// Se falhar o login, assume que é um novo cadastro ou precisa confirmar dados
-				// Então mostra o campo de nome
-				showNameField = true;
-				error = ''; // Limpa erro de login para não confundir
-				isLoading = false;
+				return;
 			}
+
+			// Login falhou: verificar se o e-mail já existe no sistema
+			const checkRes = await apiFetch('/auth/check-email', {
+				method: 'POST',
+				body: JSON.stringify({ email })
+			});
+
+			if (checkRes.ok) {
+				const { exists } = await checkRes.json();
+				if (exists) {
+					// E-mail existe mas a senha é diferente: usuário trocou a senha
+					// Redireciona para o login normal com campo de senha
+					goto(`/auth/login?email=${encodeURIComponent(email)}`);
+					return;
+				}
+			}
+
+			// E-mail não existe: é um novo cadastro, pedir o nome
+			showNameField = true;
+			error = '';
+			isLoading = false;
+
 		} catch (err) {
 			console.error('Erro ao tentar login inicial:', err);
-			// Em caso de erro de rede, tenta mostrar o campo de nome para forçar o fluxo de registro que é mais robusto
+			// Em caso de erro de rede, pedir o nome para tentar o fluxo de registro
 			showNameField = true;
 			isLoading = false;
 		}

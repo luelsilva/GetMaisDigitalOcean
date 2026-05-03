@@ -13,8 +13,6 @@
 
 	let backLink = $state('/');
 
-	// onMount removido conforme solicitação de retirar localStorage
-
 	let fullName = $state('');
 	let email = $state('');
 	let password = $state('');

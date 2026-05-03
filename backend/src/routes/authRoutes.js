@@ -23,6 +23,7 @@ router.post('/verify-otp', strictAuthLimiter, validate(otpSchema), authControlle
 router.post('/resend-otp', strictAuthLimiter, validate(emailOnlySchema), authController.resendOtp);
 router.post('/forgot-password', strictAuthLimiter, validate(emailOnlySchema), authController.forgotPassword);
 router.post('/reset-password', strictAuthLimiter, validate(resetPasswordSchema), authController.resetPassword);
+router.post('/check-email', strictAuthLimiter, validate(emailOnlySchema), authController.checkEmail);
 router.post('/login', strictAuthLimiter, validate(loginSchema), authController.login);
 router.post('/login-or-register-company', strictAuthLimiter, authController.loginOrRegisterCompany);
 router.post('/refresh', authController.refresh);
