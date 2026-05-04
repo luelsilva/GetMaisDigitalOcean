@@ -1360,7 +1360,7 @@
 								{#if submitting}
 									<span class="mr-2 animate-spin">🌀</span> Processando...
 								{:else}
-									🚀 Alterar status para Iniciado
+									🚀 Alterar status para Estagiando
 								{/if}
 							</button>
 						{/if}
