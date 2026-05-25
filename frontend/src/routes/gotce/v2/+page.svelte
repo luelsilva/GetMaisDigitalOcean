@@ -880,8 +880,6 @@
 			const response = await apiFetch(`/internships/${pageData.internship.id}`, {
 				method: 'PUT',
 				body: JSON.stringify({
-					...pageData.internship,
-					jsonData: formValues,
 					status: 'WAITING_APPROVAL'
 				})
 			});
@@ -909,8 +907,6 @@
 			const response = await apiFetch(`/internships/${pageData.internship.id}`, {
 				method: 'PUT',
 				body: JSON.stringify({
-					...pageData.internship,
-					jsonData: formValues,
 					status: 'APPROVED'
 				})
 			});
@@ -958,8 +954,6 @@
 			const response = await apiFetch(`/internships/${pageData.internship.id}`, {
 				method: 'PUT',
 				body: JSON.stringify({
-					...pageData.internship,
-					jsonData: formValues,
 					status: 'REVISION_REQUESTED'
 				})
 			});
