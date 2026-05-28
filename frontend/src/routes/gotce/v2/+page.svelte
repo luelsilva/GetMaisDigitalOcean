@@ -77,7 +77,7 @@
 				config.message = `
 					<p class="text-lg font-bold text-slate-800">Professor, este TCE está sendo editado pela empresa e posterior envio para avaliação.</p>
 					<p class="text-lg font-bold text-slate-800">Caso esteja fora do prazo, por favor, verifique a situação e adote as providências pertinentes.</p>
-					<p class="text-lg font-bold text-slate-800">Se necessário, altere o status do TCE para Iniciado ou Finalizado.</p>
+					<p class="text-lg font-bold text-slate-800">Se necessário, altere o status do TCE para Estagiando ou Finalizado.</p>
 				`;
 			} else {
 				config.canSave = true;
@@ -85,7 +85,7 @@
 				config.readonly = false;
 				config.message = `
 					<p class="text-lg font-bold text-slate-800">O TCE encontra-se em edição.</p>
-					<p class="text-lg font-bold text-slate-800">Preencha os dados solicitados e clique em Atualizar Estágio.<p>
+					<p class="text-lg font-bold text-slate-800">Preencha os dados solicitados e clique em Atualizar Estágio.</p>
 					<p class="text-lg font-bold text-slate-800">Depois, clique em Enviar para o professor avaliar.</p>
 				`;
 			}
@@ -1269,7 +1269,9 @@
 					{/each}
 				</div>
 
-				<div class="mt-8 flex w-full flex-col items-center gap-4 rounded-2xl border border-slate-100 bg-slate-50/50 p-6">
+				<div
+					class="mt-8 flex w-full flex-col items-center gap-4 rounded-2xl border border-slate-100 bg-slate-50/50 p-6"
+				>
 					<div
 						class="flex w-full flex-col items-center gap-1 rounded-xl border border-amber-100 bg-amber-50 p-4 text-center shadow-sm"
 					>
@@ -1410,11 +1412,11 @@
 				</div>
 			</form>
 
-            {#if pageData.internship && pageData.internship.id}
-                <div class="w-full max-w-4xl mx-auto mt-8">
-                    <InternshipHistory internshipId={pageData.internship.id} />
-                </div>
-            {/if}
+			{#if pageData.internship && pageData.internship.id}
+				<div class="mx-auto mt-8 w-full max-w-4xl">
+					<InternshipHistory internshipId={pageData.internship.id} />
+				</div>
+			{/if}
 		</div>
 	</div>
 {:else}
