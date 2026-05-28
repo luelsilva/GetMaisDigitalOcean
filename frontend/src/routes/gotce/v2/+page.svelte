@@ -1217,7 +1217,7 @@
 															<input
 																id={inputId}
 																type="text"
-																class="col-input cursor-not-allowed bg-gray-50"
+																class="col-input cursor-text bg-gray-50 select-all"
 																readonly
 																bind:value={formValues[inputId]}
 															/>
