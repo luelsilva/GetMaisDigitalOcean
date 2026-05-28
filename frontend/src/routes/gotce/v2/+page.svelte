@@ -52,6 +52,9 @@
 			config.canPDF = true;
 			if (isProf) {
 				config.canSave = true;
+				config.canApprove = true;
+				config.canStart = true;
+				config.canFinish = true;
 				config.readonly = false;
 				config.message = `
 					<p class="text-lg font-bold text-slate-800">Professor, o TCE está em modo de edição.</p>
@@ -95,6 +98,8 @@
 				config.canPDF = true;
 				config.canApprove = true;
 				config.canReject = true;
+				config.canStart = true;
+				config.canFinish = true;
 				config.readonly = false;
 				config.message = `
 					<p class="text-lg font-bold text-slate-800">Professor, o TCE aguarda sua aprovação.</p>
@@ -116,7 +121,7 @@
 				config.message = `
 					<p class="text-lg font-bold text-slate-800">Foi solicitada revisão deste TCE. Aguarde o reenvio pela empresa após as correções.</p>
 					<p class="text-lg font-bold text-slate-800">Caso esteja fora do prazo, por favor, verifique a situação e adote as providências pertinentes.</p>
-					<p class="text-lg font-bold text-slate-800">Se necessário, altere o status do TCE para Iniciado ou Finalizado.</p>
+					<p class="text-lg font-bold text-slate-800">Se necessário, altere o status do TCE para Estagiando ou Finalizado.</p>
 				`;
 			} else {
 				config.canSave = true;
@@ -135,7 +140,7 @@
 				config.readonly = true;
 				config.message = `
 					<p class="text-lg font-bold text-slate-800">O TCE foi aprovado com sucesso. O estágio pode ser iniciado conforme o cronograma.</p>
-					<p class="text-lg font-bold text-slate-800">Se necessário, altere o status do TCE para Iniciado ou Finalizado.</p>
+					<p class="text-lg font-bold text-slate-800">Se necessário, altere o status do TCE para Estagiando ou Finalizado.</p>
 				`;
 			} else {
 				config.message = `
