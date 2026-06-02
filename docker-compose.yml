@@ -30,24 +30,6 @@ services:
     depends_on:
       - backend
 
-  # ─────────────────────────────────────────────
-  # Microserviço processador-alunos (Python/FastAPI)
-  # Apenas acessível internamente pelo backend Node.js
-  # Nunca exposto à internet (sem "ports:", apenas "expose:")
-  # ─────────────────────────────────────────────
-  processador-alunos:
-    build:
-      context: ../processador-alunos/backend
-      dockerfile: Dockerfile
-    container_name: processador-alunos
-    restart: always
-    env_file:
-      - ../processador-alunos/backend/.env
-    expose:
-      - "8000"
-    depends_on:
-      - backend
-
   nginx:
     image: nginx:alpine
     container_name: stage-nginx
@@ -59,4 +41,21 @@ services:
     depends_on:
       - frontend
       - backend
-      - processador-alunos
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # ATENÇÃO: descomentar após clonar o repositório processador-alunos no servidor
+  # Clone: git clone <url> /home/ubuntu/processador-alunos
+  # Depois: docker compose up --build -d
+  # ─────────────────────────────────────────────────────────────────────────────
+  # processador-alunos:
+  #   build:
+  #     context: ../processador-alunos/backend
+  #     dockerfile: Dockerfile
+  #   container_name: processador-alunos
+  #   restart: always
+  #   env_file:
+  #     - ../processador-alunos/backend/.env
+  #   expose:
+  #     - "8000"
+  #   depends_on:
+  #     - backend
