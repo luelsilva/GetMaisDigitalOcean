@@ -41,17 +41,3 @@ services:
     depends_on:
       - frontend
       - backend
-      - processador-alunos
-
-  processador-alunos:
-    build:
-      context: ../processador-alunos/backend
-      dockerfile: Dockerfile
-    container_name: processador-alunos
-    restart: always
-    env_file:
-      - ../processador-alunos/backend/.env
-    expose:
-      - "8000"
-    depends_on:
-      - backend
