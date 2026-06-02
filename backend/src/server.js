@@ -32,6 +32,7 @@ const keepAliveRoutes = require('./routes/keepAliveRoutes');
 const configRoutes = require('./routes/configRoutes');
 const webhookRoutes = require('./routes/webhookRoutes');
 const emailRoutes = require('./routes/emailRoutes');
+const alunosImportRoutes = require('./routes/alunosImportRoutes');
 // Rotas
 app.use('/api/auth', authRoutes);
 app.use('/api/webhooks', webhookRoutes);
@@ -45,6 +46,7 @@ app.use('/api/teachers', teacherRoutes);
 app.use('/api/usuarios', userRoutes);
 app.use('/api/forms', formRoutes);
 app.use('/api/internships', internshipRoutes);
+app.use('/api/alunos', alunosImportRoutes);
 app.use('/api/system', keepAliveRoutes);
 
 // Rota de Teste

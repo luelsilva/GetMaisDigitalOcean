@@ -11,7 +11,8 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "db:export:csv": "node z_MyAnotes/scripts/export_to_csv.js",
-    "db:import:csv": "node z_MyAnotes/scripts/import_from_csv.js"
+    "db:import:csv": "node z_MyAnotes/scripts/import_from_csv.js",
+    "generate:token": "node z_MyAnotes/scripts/generate-internal-token.js"
   },
   "keywords": [],
   "author": "",
@@ -25,10 +26,13 @@
     "drizzle-orm": "^0.45.1",
     "express": "^5.2.1",
     "express-rate-limit": "^8.2.1",
+    "form-data": "^4.0.1",
     "googleapis": "^169.0.0",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
     "libreoffice-convert": "^1.8.1",
+    "multer": "^2.0.1",
+    "node-fetch": "^2.7.0",
     "pg": "^8.16.3",
     "pizzip": "^3.2.0",
     "postgres": "^3.4.7",
