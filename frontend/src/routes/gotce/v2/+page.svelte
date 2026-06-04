@@ -74,6 +74,7 @@
 			config.canPDF = true;
 			if (isProf) {
 				config.canSave = true;
+				config.canApprove = true;
 				config.canStart = true;
 				config.canFinish = true;
 				config.readonly = false;
@@ -106,9 +107,13 @@
 					<p class="text-lg font-bold text-slate-800">Revise as informações e clique em Aprovar Estágio ou Devolver.</p>
 				`;
 			} else {
+				config.canSave = true;
+				config.canPDF = true;
+				config.canSubmitForApproval = true;
+				config.readonly = false;
 				config.message = `
 					<p class="text-lg font-bold text-slate-800">O TCE foi enviado para aprovação do professor.</p>
-					<p class="text-lg font-bold text-slate-800">Aguarde a avaliação.</p>
+					<p class="text-lg font-bold text-slate-800">Caso precise fazer ajustes, edite e reenvie para avaliação.</p>
 				`;
 			}
 		} else if (internship_status === 'REVISION_REQUESTED') {
