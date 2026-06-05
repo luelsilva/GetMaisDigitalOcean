@@ -87,7 +87,9 @@
     function openObsModal(aluno: any) {
         selectedAluno = aluno;
         newObsText = '';
-        teacherName = $currentUserStore?.fullName || $currentUserStore?.email?.split('@')[0] || '';
+        const name = $currentUserStore?.fullName || $currentUserStore?.email?.split('@')[0] || '';
+        const email = $currentUserStore?.email ? ` (${$currentUserStore.email})` : '';
+        teacherName = `${name}${email}`;
         isObsModalOpen = true;
     }
 
@@ -501,16 +503,8 @@
                     ></textarea>
                     
                     <div class="flex flex-col sm:flex-row gap-3 items-center justify-between">
-                        <div class="flex items-center gap-2 w-full sm:w-auto">
-                            <label for="profName" class="text-xs font-semibold text-gray-500 whitespace-nowrap">Assinatura:</label>
-                            <input 
-                                id="profName"
-                                type="text" 
-                                bind:value={teacherName}
-                                placeholder="Nome do Professor"
-                                class="rounded-lg border border-gray-200 px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-blue-500"
-                                required
-                            />
+                        <div class="text-xs font-semibold text-gray-500">
+                            Assinatura: <span class="font-bold text-gray-800">{teacherName}</span>
                         </div>
                         
                         <button 
