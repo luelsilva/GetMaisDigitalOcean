@@ -67,7 +67,7 @@
 				config.message = `
 					<p class="text-lg font-bold text-slate-800">O TCE encontra-se em edição.</p>
 					<p class="text-lg font-bold text-slate-800">Preencha os dados solicitados e clique em Atualizar Estágio.</p>
-					<p class="text-lg font-bold text-slate-800">Depois, clique em Enviar para o professor avaliar.</p>
+					<p class="text-lg font-bold text-slate-800">Depois, envie para o professor avaliar.</p>
 				`;
 			}
 		} else if (internship_status === 'DRAFT') {
@@ -90,7 +90,7 @@
 				config.message = `
 					<p class="text-lg font-bold text-slate-800">O TCE encontra-se em edição.</p>
 					<p class="text-lg font-bold text-slate-800">Preencha os dados solicitados e clique em Atualizar Estágio.</p>
-					<p class="text-lg font-bold text-slate-800">Depois, clique em Enviar para o professor avaliar.</p>
+					<p class="text-lg font-bold text-slate-800">Depois, envie para o professor avaliar.</p>
 				`;
 			}
 		} else if (internship_status === 'WAITING_APPROVAL') {
