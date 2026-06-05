@@ -19,6 +19,7 @@
     let isObsModalOpen = $state(false);
     let isEditModalOpen = $state(false);
     let selectedAluno = $state<any>(null);
+    let isAddingObs = $state(false);
 
     // Form de Observações
     let newObsText = $state('');
@@ -87,9 +88,10 @@
     function openObsModal(aluno: any) {
         selectedAluno = aluno;
         newObsText = '';
-        const name = $currentUserStore?.fullName || $currentUserStore?.email?.split('@')[0] || '';
+        const name = $currentUserStore?.name || $currentUserStore?.email?.split('@')[0] || '';
         const email = $currentUserStore?.email ? ` (${$currentUserStore.email})` : '';
         teacherName = `${name}${email}`;
+        isAddingObs = false;
         isObsModalOpen = true;
     }
 
@@ -111,6 +113,7 @@
                 selectedAluno.observacoes = [newObs, ...selectedAluno.observacoes];
                 alunosList = [...alunosList];
                 newObsText = '';
+                isAddingObs = false;
             } else {
                 const data = await res.json();
                 alert(data.error || 'Erro ao adicionar observação');
@@ -490,32 +493,52 @@
             </div>
 
             <!-- Footer Modal (Formulário de Nova Nota) -->
-            <div class="p-6 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
-                <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Adicionar Nova Observação</h3>
-                
-                <form onsubmit={(e) => { e.preventDefault(); addObservation(); }} class="space-y-3">
-                    <textarea 
-                        bind:value={newObsText} 
-                        rows="3" 
-                        placeholder="Escreva a anotação para o aluno..."
-                        class="w-full rounded-xl border border-gray-200 p-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                        required
-                    ></textarea>
+            {#if !isAddingObs}
+                <div class="p-6 border-t border-gray-100 bg-gray-50 rounded-b-2xl flex justify-center">
+                    <button 
+                        onclick={() => isAddingObs = true}
+                        class="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md transition-all active:scale-95"
+                    >
+                        ➕ Adicionar nova anotação
+                    </button>
+                </div>
+            {:else}
+                <div class="p-6 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
+                    <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Adicionar Nova Observação</h3>
                     
-                    <div class="flex flex-col sm:flex-row gap-3 items-center justify-between">
-                        <div class="text-xs font-semibold text-gray-500">
-                            Assinatura: <span class="font-bold text-gray-800">{teacherName}</span>
-                        </div>
+                    <form onsubmit={(e) => { e.preventDefault(); addObservation(); }} class="space-y-3">
+                        <textarea 
+                            bind:value={newObsText} 
+                            rows="3" 
+                            placeholder="Escreva a anotação para o aluno..."
+                            class="w-full rounded-xl border border-gray-200 p-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                            required
+                        ></textarea>
                         
-                        <button 
-                            type="submit"
-                            class="w-full sm:w-auto px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-all active:scale-95"
-                        >
-                            Gravar Observação
-                        </button>
-                    </div>
-                </form>
-            </div>
+                        <div class="flex flex-col sm:flex-row gap-3 items-center justify-between">
+                            <div class="text-xs font-semibold text-gray-500">
+                                Assinatura: <span class="font-bold text-gray-800">{teacherName}</span>
+                            </div>
+                            
+                            <div class="flex gap-2 w-full sm:w-auto">
+                                <button 
+                                    type="button"
+                                    onclick={() => isAddingObs = false}
+                                    class="px-4 py-2 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-100 font-bold text-xs transition-all"
+                                >
+                                    Cancelar
+                                </button>
+                                <button 
+                                    type="submit"
+                                    class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-all active:scale-95"
+                                >
+                                    Gravar Observação
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            {/if}
             
         </div>
     </div>
