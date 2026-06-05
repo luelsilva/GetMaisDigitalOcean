@@ -168,7 +168,7 @@ exports.getInternshipHistory = async (req, res, next) => {
 
             if (!internship) return res.status(404).json({ error: 'Estágio não encontrado' });
 
-            if (internship.userId !== req.user.id && internship.companyId !== req.user.id) {
+            if (internship.userId !== req.user.id && internship.companyId && internship.companyId !== req.user.id) {
                 return res.status(403).json({ error: 'Acesso negado ao histórico deste estágio.' });
             }
         }
