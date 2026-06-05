@@ -3,6 +3,7 @@
     import { fade } from 'svelte/transition';
     import { apiFetch } from '$lib/api';
     import { user as currentUserStore } from '$lib/stores/auth';
+    import { goto } from '$app/navigation';
 
     // State
     let alunosList = $state<any[]>([]);
@@ -234,6 +235,10 @@
     );
 
     onMount(() => {
+        if ($currentUserStore && !['admin', 'sudo'].includes($currentUserStore.roles)) {
+            goto('/');
+            return;
+        }
         loadAlunos();
         loadCourses();
         loadSituacoes();
