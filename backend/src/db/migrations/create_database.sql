@@ -484,3 +484,83 @@ CREATE TRIGGER email_logs_updated_at_trigger
 COMMENT ON TABLE email_logs IS 'Registro de todos os e-mails enviados pelo Resend, com histórico de status via webhooks';
 COMMENT ON COLUMN email_logs.resend_id IS 'ID retornado pela API do Resend, usado para correlacionar eventos de webhook';
 COMMENT ON COLUMN email_logs.events IS 'Array JSONB com o histórico cronológico de todos os eventos recebidos do Resend';
+
+
+-- ============================================
+-- TABELAS DO PROCESSADOR DE ALUNOS
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS public.alunos (
+    id SERIAL PRIMARY KEY,
+    matriz TEXT,
+    curso_id UUID REFERENCES public.courses(id),
+    turno TEXT,
+    modulo TEXT,
+    turma TEXT,
+    turma_codigo TEXT,
+    periodo TEXT,
+    matricula TEXT,
+    estudante TEXT,
+    sexo TEXT,
+    data_nascimento TEXT,
+    situacao TEXT,
+    identidade TEXT,
+    cpf TEXT,
+    celular_aluno TEXT,
+    telefone_residencial TEXT,
+    email TEXT,
+    celular_responsavel TEXT,
+    nome_mae TEXT,
+    endereco TEXT,
+    complemento TEXT,
+    bairro TEXT,
+    cep TEXT,
+    municipio TEXT,
+    
+    -- NOVOS CAMPOS (Para preenchimento futuro)
+    porcentagem_dispensa INTEGER,
+    nota_estagio NUMERIC(4,1),
+    data_entrega_relatorio DATE,
+    data_inicio_estagio DATE,
+    data_fim_estagio DATE,
+    ano_inicio_curso INTEGER,
+    semestre_inicio_curso TEXT,
+    total_horas_estagio INTEGER,
+    CONSTRAINT uix_turma_cpf UNIQUE (turma_codigo, cpf)
+);
+ALTER TABLE public.alunos ENABLE ROW LEVEL SECURITY;
+
+CREATE INDEX IF NOT EXISTS ix_alunos_turma ON public.alunos (turma);
+CREATE INDEX IF NOT EXISTS ix_alunos_matricula ON public.alunos (matricula);
+
+CREATE TABLE IF NOT EXISTS public.observacoes_alunos (
+    id SERIAL PRIMARY KEY,
+    aluno_id INTEGER REFERENCES public.alunos(id) ON DELETE CASCADE,
+    data_anotacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    texto TEXT NOT NULL,
+    nome_professor TEXT NOT NULL
+);
+ALTER TABLE public.observacoes_alunos ENABLE ROW LEVEL SECURITY;
+
+CREATE INDEX IF NOT EXISTS ix_observacoes_aluno_id ON public.observacoes_alunos (aluno_id);
+
+-- ============================================
+-- TABELA: situacao_aluno (Opções de Situação)
+-- ============================================
+CREATE TABLE IF NOT EXISTS public.situacao_aluno (
+    id SERIAL PRIMARY KEY,
+    nome VARCHAR(100) NOT NULL UNIQUE
+);
+ALTER TABLE public.situacao_aluno ENABLE ROW LEVEL SECURITY;
+
+INSERT INTO public.situacao_aluno (nome) VALUES
+('Aprovado'),
+('Reprovado'),
+('Desistente'),
+('Estagiando'),
+('Cursando'),
+('Venceu'),
+('Pendente')
+ON CONFLICT (nome) DO NOTHING;
+
+

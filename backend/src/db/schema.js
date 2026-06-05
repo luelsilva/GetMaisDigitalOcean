@@ -1,4 +1,4 @@
-const { pgTable, uuid, text, timestamp, boolean, pgEnum, serial, smallint, varchar, integer, jsonb, bigint, date } = require('drizzle-orm/pg-core');
+const { pgTable, uuid, text, timestamp, boolean, pgEnum, serial, smallint, varchar, integer, jsonb, bigint, date, numeric, unique, index } = require('drizzle-orm/pg-core');
 
 // Enum para tipos de OTP
 const otpTypeEnum = pgEnum('otp_type', ['registration', 'password_reset']);
@@ -179,6 +179,67 @@ const internshipsHistory = pgTable('internships_history', {
     status: internshipStatusEnum('status')
 });
 
+// Tabela de Alunos do Processador de Alunos
+const alunos = pgTable('alunos', {
+    id: serial('id').primaryKey(),
+    matriz: text('matriz'),
+    cursoId: uuid('curso_id').references(() => courses.id),
+    turno: text('turno'),
+    modulo: text('modulo'),
+    turma: text('turma'),
+    turmaCodigo: text('turma_codigo'),
+    periodo: text('periodo'),
+    matricula: text('matricula'),
+    estudante: text('estudante'),
+    sexo: text('sexo'),
+    dataNascimento: text('data_nascimento'),
+    situacao: text('situacao'),
+    identidade: text('identidade'),
+    cpf: text('cpf'),
+    celularAluno: text('celular_aluno'),
+    telefoneResidencial: text('telefone_residencial'),
+    email: text('email'),
+    celularResponsavel: text('celular_responsavel'),
+    nomeMae: text('nome_mae'),
+    endereco: text('endereco'),
+    complemento: text('complemento'),
+    bairro: text('bairro'),
+    cep: text('cep'),
+    municipio: text('municipio'),
+    porcentagemDispensa: integer('porcentagem_dispensa'),
+    notaEstagio: numeric('nota_estagio', { precision: 4, scale: 1 }),
+    dataEntregaRelatorio: date('data_entrega_relatorio'),
+    dataInicioEstagio: date('data_inicio_estagio'),
+    dataFimEstagio: date('data_fim_estagio'),
+    anoInicioCurso: integer('ano_inicio_curso'),
+    semestreInicioCurso: text('semestre_inicio_curso'),
+    totalHorasEstagio: integer('total_horas_estagio')
+}, (table) => {
+    return {
+        uixTurmaCpf: unique('uix_turma_cpf').on(table.turmaCodigo, table.cpf),
+        ixAlunosTurma: index('ix_alunos_turma').on(table.turma),
+        ixAlunosMatricula: index('ix_alunos_matricula').on(table.matricula)
+    };
+});
+
+// Tabela de Observações dos Alunos
+const observacoesAlunos = pgTable('observacoes_alunos', {
+    id: serial('id').primaryKey(),
+    alunoId: integer('aluno_id').references(() => alunos.id, { onDelete: 'cascade' }),
+    dataAnotacao: timestamp('data_anotacao', { withTimezone: true }).defaultNow(),
+    texto: text('texto').notNull(),
+    nomeProfessor: text('nome_professor').notNull()
+}, (table) => {
+    return {
+        ixObservacoesAlunoId: index('ix_observacoes_aluno_id').on(table.alunoId)
+    };
+});
+
+const situacaoAluno = pgTable('situacao_aluno', {
+    id: serial('id').primaryKey(),
+    nome: varchar('nome', { length: 100 }).notNull().unique()
+});
+
 module.exports = {
     profiles,
     otpCodes,
@@ -193,5 +254,9 @@ module.exports = {
     internshipsHistory,
     keepAlive,
     appSettings,
-    emailLogs
+    emailLogs,
+    alunos,
+    observacoesAlunos,
+    situacaoAluno
 };
+
