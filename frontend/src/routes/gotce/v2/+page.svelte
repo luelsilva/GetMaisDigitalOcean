@@ -13,17 +13,34 @@
 			mode: 'new' | 'edit';
 			internship_status: string;
 			user_role: string;
+			features?: {
+				enable_tce_buttons?: boolean;
+			};
 		};
 	}
 
 	let { data: pageData }: Props = $props();
 	let form = $derived(pageData.form);
+	let enableTceButtons = $derived(pageData.features?.enable_tce_buttons || false);
 
-	let pageConfig = $derived.by(() => {
+	interface PageConfig {
+		message: string;
+		canSave: boolean;
+		canPDF: boolean;
+		canSubmitForApproval: boolean;
+		canApprove: boolean;
+		canReject: boolean;
+		canStart: boolean;
+		canFinish: boolean;
+		readonly: boolean;
+		saveLabel: string;
+	}
+
+	let pageConfig = $derived.by<PageConfig>(() => {
 		const { mode, internship_status, user_role } = pageData;
 		const isProf = ['teacher', 'admin', 'sudo'].includes(user_role);
 
-		let config = {
+		let config: PageConfig = {
 			message: '',
 			canSave: false,
 			canPDF: false,
@@ -1307,7 +1324,7 @@
 							</button>
 						{/if}
 
-						{#if pageConfig.canSubmitForApproval && pageData.user_role === 'company'}
+						{#if enableTceButtons && pageConfig.canSubmitForApproval && pageData.user_role === 'company'}
 							<button
 								type="button"
 								onclick={handleSendForApproval}
@@ -1339,7 +1356,7 @@
 							</button>
 						{/if}
 
-						{#if pageConfig.canReject}
+						{#if enableTceButtons && pageConfig.canReject}
 							<button
 								type="button"
 								onclick={handleReject}

@@ -445,7 +445,7 @@ COMMENT ON TABLE app_settings IS 'Tabela de configurações globais e Feature Fl
 
 -- Inserir flag inicial para o Novo TCE (desativado por padrão)
 INSERT INTO app_settings (key, value) 
-VALUES ('feature_flags', '{"use_tce_v2": false}')
+VALUES ('feature_flags', '{"use_tce_v2": false, "enable_tce_buttons": false}')
 ON CONFLICT (key) DO NOTHING;
 
 

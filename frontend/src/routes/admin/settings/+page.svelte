@@ -5,6 +5,7 @@
     export let data;
 
     let useTceV2 = data.features?.use_tce_v2 || false;
+    let enableTceButtons = data.features?.enable_tce_buttons || false;
     let loading = false;
     let message = { text: '', type: '' };
 
@@ -15,7 +16,10 @@
         try {
             const res = await apiFetch('/config/features', {
                 method: 'PUT',
-                body: JSON.stringify({ use_tce_v2: useTceV2 })
+                body: JSON.stringify({ 
+                    use_tce_v2: useTceV2,
+                    enable_tce_buttons: enableTceButtons
+                })
             });
 
             const result = await res.json();
@@ -63,6 +67,19 @@
                     <div class="setting-control">
                         <label class="switch">
                             <input type="checkbox" bind:checked={useTceV2}>
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="setting-item" style="border-top: 1px solid #f1f5f9; padding-top: 1.5rem; margin-top: 1.5rem;">
+                    <div class="setting-info">
+                        <h3>Botões de Ação do TCE v2</h3>
+                        <p>Habilita os botões "Enviar para o professor avaliar" (para empresas) e "Devolver" (para professores) na interface do TCE v2.</p>
+                    </div>
+                    <div class="setting-control">
+                        <label class="switch">
+                            <input type="checkbox" bind:checked={enableTceButtons}>
                             <span class="slider round"></span>
                         </label>
                     </div>
