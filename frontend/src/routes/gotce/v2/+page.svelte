@@ -121,7 +121,7 @@
 				config.readonly = false;
 				config.message = `
 					<p class="text-lg font-bold text-slate-800">Professor, o TCE aguarda sua aprovação.</p>
-					<p class="text-lg font-bold text-slate-800">Revise as informações e clique em Aprovar Estágio ou Devolver.</p>
+					<p class="text-lg font-bold text-slate-800">Revise as informações e clique em Atualizar status para aprovado ou Devolver.</p>
 				`;
 			} else {
 				config.canSave = true;
@@ -939,7 +939,8 @@
 			});
 
 			if (response.ok) {
-				// Envia email de aprovação para a empresa (endpoint já faz join com profiles e loga o email)
+				// Envio de e-mail comentado pois o professor enviará o e-mail por conta própria
+				/*
 				const notifyRes = await apiFetch(
 					`/internships/${pageData.internship.id}/notificar-aprovacao`,
 					{
@@ -956,6 +957,8 @@
 							(notifyErr.error || 'Erro desconhecido')
 					);
 				}
+				*/
+				alert('Estágio aprovado com sucesso!');
 				window.location.reload();
 			} else {
 				const err = await response.json();
@@ -1351,7 +1354,7 @@
 								{#if submitting}
 									<span class="mr-2 animate-spin">🌀</span> Processando...
 								{:else}
-									✅ Aprovar Estágio
+									✅ Atualizar status para aprovado
 								{/if}
 							</button>
 						{/if}
