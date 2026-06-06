@@ -1,6 +1,7 @@
 const { db } = require('../db');
 const { appSettings, occurrenceRules } = require('../db/schema');
 const { eq } = require('drizzle-orm');
+const { checkAllOccurrences } = require('../services/occurrenceService');
 
 exports.getFeatureFlags = async (req, res) => {
     try {
@@ -89,5 +90,15 @@ exports.updateOccurrenceRule = async (req, res) => {
     } catch (error) {
         console.error('[CONFIG CONTROLLER RULE UPDATE ERR]', error);
         res.status(500).json({ error: 'Erro ao salvar regra de ocorrência' });
+    }
+};
+
+exports.triggerOccurrenceCheck = async (req, res) => {
+    try {
+        await checkAllOccurrences();
+        res.json({ success: true, message: 'Verificação de ocorrências executada com sucesso!' });
+    } catch (error) {
+        console.error('[CONFIG CONTROLLER TRIGGER CHECK ERR]', error);
+        res.status(500).json({ error: 'Erro ao executar verificação de ocorrências' });
     }
 };

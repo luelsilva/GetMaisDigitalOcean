@@ -46,6 +46,32 @@
         }
     }
 
+    let checkLoading = false;
+
+    async function triggerCheck() {
+        checkLoading = true;
+        rulesMessage = { text: '', type: '' };
+
+        try {
+            const res = await apiFetch('/config/check-occurrences', {
+                method: 'POST'
+            });
+
+            const result = await res.json();
+
+            if (res.ok) {
+                rulesMessage = { text: 'Verificação de ocorrências executada com sucesso!', type: 'success' };
+            } else {
+                rulesMessage = { text: result.error || 'Erro ao executar verificação.', type: 'error' };
+            }
+        } catch {
+            rulesMessage = { text: 'Falha na comunicação com o servidor.', type: 'error' };
+        } finally {
+            checkLoading = false;
+            setTimeout(() => { rulesMessage = { text: '', type: '' }; }, 3000);
+        }
+    }
+
     async function saveSettings() {
         loading = true;
         message = { text: '', type: '' };
@@ -207,13 +233,26 @@
                 <button 
                     class="btn-save" 
                     on:click={saveRules} 
-                    disabled={rulesLoading}
+                    disabled={rulesLoading || checkLoading}
                     style="background: #2563eb; color: white;"
                 >
                     {#if rulesLoading}
                         <span class="spinner"></span> Salvando...
                     {:else}
                         Salvar Regras
+                    {/if}
+                </button>
+
+                <button 
+                    class="btn-save" 
+                    on:click={triggerCheck} 
+                    disabled={rulesLoading || checkLoading}
+                    style="background: #eab308; color: #1e293b;"
+                >
+                    {#if checkLoading}
+                        <span class="spinner" style="border-top-color: #1e293b;"></span> Executando...
+                    {:else}
+                        Recalcular Ocorrências
                     {/if}
                 </button>
             </footer>
