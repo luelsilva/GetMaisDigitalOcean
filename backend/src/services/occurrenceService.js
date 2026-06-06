@@ -1,6 +1,6 @@
 const { db } = require('../db');
 const { internships, internshipOccurrences, occurrenceRules } = require('../db/schema');
-const { eq, and, isNull, sql } = require('drizzle-orm');
+const { eq, and, isNull, sql, inArray } = require('drizzle-orm');
 
 // Helper para formatar data do formato YYYY-MM-DD para DD/MM/YYYY
 function formatDatePtBR(dateStr) {
@@ -34,7 +34,7 @@ const statusLabels = {
  * Executa a verificação diária de ocorrências para todos os estágios ativos.
  */
 async function checkAllOccurrences() {
-    console.log('[OCCURRENCE CHECK] Iniciando verificação com 8 regras dinâmicas...');
+    console.log('[OCCURRENCE CHECK] Iniciando verificação otimizada com 8 regras dinâmicas...');
     try {
         const now = new Date();
         const todayStr = now.toISOString().split('T')[0];
@@ -44,13 +44,24 @@ async function checkAllOccurrences() {
         const dbRules = await db.select().from(occurrenceRules);
         const rulesMap = new Map(dbRules.map(r => [r.key, r]));
 
-        // Buscar todos os estágios não deletados
+        // 2. Buscar todos os estágios não deletados
         const activeInternships = await db.select()
             .from(internships)
             .where(isNull(internships.deletedAt));
 
-        let newCount = 0;
-        let autoResolvedCount = 0;
+        // 3. Buscar todas as ocorrências ativas (não resolvidas)
+        const openOccurrences = await db.select()
+            .from(internshipOccurrences)
+            .where(isNull(internshipOccurrences.resolvedAt));
+
+        // Mapear ocorrências ativas por `${internshipId}_${ruleKey}` -> ocorrência
+        const openOccMap = new Map();
+        for (const occ of openOccurrences) {
+            openOccMap.set(`${occ.internshipId}_${occ.ruleKey}`, occ);
+        }
+
+        const occurrencesToInsert = [];
+        const occurrenceIdsToResolve = [];
 
         for (const internship of activeInternships) {
             const internshipId = internship.id;
@@ -212,27 +223,13 @@ async function checkAllOccurrences() {
 
             // Avaliar cada regra
             for (const rule of rules) {
-                // Buscar ocorrência existente para este estágio e regra
-                const [existing] = await db.select()
-                    .from(internshipOccurrences)
-                    .where(
-                        and(
-                            eq(internshipOccurrences.internshipId, internshipId),
-                            eq(internshipOccurrences.ruleKey, rule.key)
-                        )
-                    )
-                    .limit(1);
+                const mapKey = `${internshipId}_${rule.key}`;
+                const existing = openOccMap.get(mapKey);
 
                 // Se a regra não estiver ativa no sistema, resolvemos qualquer pendência dela automaticamente
                 if (!rule.active) {
-                    if (existing && !existing.resolvedAt) {
-                        await db.update(internshipOccurrences)
-                            .set({
-                                resolvedAt: new Date(),
-                                resolvedBy: null // Indica resolução automática pelo sistema (regra desativada)
-                            })
-                            .where(eq(internshipOccurrences.id, existing.id));
-                        autoResolvedCount++;
+                    if (existing) {
+                        occurrenceIdsToResolve.push(existing.id);
                     }
                     continue;
                 }
@@ -240,48 +237,48 @@ async function checkAllOccurrences() {
                 if (rule.met) {
                     // Se atendeu aos critérios da regra e não houver ocorrência criada
                     if (!existing) {
-                        await db.insert(internshipOccurrences).values({
+                        occurrencesToInsert.push({
                             internshipId,
                             ruleKey: rule.key,
                             description: rule.description,
                             createdAt: new Date()
                         });
-                        newCount++;
                     }
                 } else {
                     // Se não atendeu e havia uma ocorrência ativa (pendente), resolve automaticamente
-                    if (existing && !existing.resolvedAt) {
-                        await db.update(internshipOccurrences)
-                            .set({
-                                resolvedAt: new Date(),
-                                resolvedBy: null
-                            })
-                            .where(eq(internshipOccurrences.id, existing.id));
-                        autoResolvedCount++;
+                    if (existing) {
+                        occurrenceIdsToResolve.push(existing.id);
                     }
                 }
             }
-
-            // Atualizar status hasOccurrences do estágio
-            const pendingOccurrences = await db.select()
-                .from(internshipOccurrences)
-                .where(
-                    and(
-                        eq(internshipOccurrences.internshipId, internshipId),
-                        isNull(internshipOccurrences.resolvedAt)
-                    )
-                );
-
-            const hasOccurrencesNow = pendingOccurrences.length > 0;
-
-            if (internship.hasOccurrences !== hasOccurrencesNow) {
-                await db.update(internships)
-                    .set({ hasOccurrences: hasOccurrencesNow })
-                    .where(eq(internships.id, internshipId));
-            }
         }
 
-        console.log(`[OCCURRENCE CHECK] Concluído. Novas: ${newCount}, Auto-resolvidas: ${autoResolvedCount}`);
+        // 5. Salvar novos alertas em lote (Bulk Insert)
+        if (occurrencesToInsert.length > 0) {
+            await db.insert(internshipOccurrences).values(occurrencesToInsert);
+        }
+
+        // 6. Resolver alertas antigos em lote (Bulk Update)
+        if (occurrenceIdsToResolve.length > 0) {
+            await db.update(internshipOccurrences)
+                .set({
+                    resolvedAt: now,
+                    resolvedBy: null
+                })
+                .where(inArray(internshipOccurrences.id, occurrenceIdsToResolve));
+        }
+
+        // 7. Sincronizar status hasOccurrences do estágio via SQL nativo
+        await db.execute(sql`
+            UPDATE internships i
+            SET has_occurrences = EXISTS (
+                SELECT 1 FROM internship_occurrences io
+                WHERE io.internship_id = i.id AND io.resolved_at IS NULL
+            )
+            WHERE i.deleted_at IS NULL
+        `);
+
+        console.log(`[OCCURRENCE CHECK] Concluído de forma otimizada. Novas: ${occurrencesToInsert.length}, Auto-resolvidas: ${occurrenceIdsToResolve.length}`);
     } catch (error) {
         console.error('[OCCURRENCE CHECK ERROR] Falha ao executar verificação:', error);
     }

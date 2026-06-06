@@ -95,10 +95,17 @@ exports.updateOccurrenceRule = async (req, res) => {
 
 exports.triggerOccurrenceCheck = async (req, res) => {
     try {
-        await checkAllOccurrences();
-        res.json({ success: true, message: 'Verificação de ocorrências executada com sucesso!' });
+        // Executa em segundo plano para evitar timeout na requisição do cliente
+        checkAllOccurrences().catch(err => {
+            console.error('[BACKGROUND CHECK ERR]', err);
+        });
+
+        res.json({ 
+            success: true, 
+            message: 'A verificação foi iniciada em segundo plano e deve terminar em alguns segundos!' 
+        });
     } catch (error) {
         console.error('[CONFIG CONTROLLER TRIGGER CHECK ERR]', error);
-        res.status(500).json({ error: 'Erro ao executar verificação de ocorrências' });
+        res.status(500).json({ error: 'Erro ao iniciar verificação de ocorrências' });
     }
 };
