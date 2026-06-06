@@ -9,4 +9,8 @@ router.get('/features', authenticateToken, configController.getFeatureFlags);
 // Rota para atualizar flags - Somente ADMIN ou SUDO
 router.put('/features', authenticateToken, authorizeRoles('admin', 'sudo'), configController.updateFeatureFlags);
 
+// Rotas de configuração de regras de ocorrência
+router.get('/occurrence-rules', authenticateToken, authorizeRoles('teacher', 'admin', 'sudo'), configController.getOccurrenceRules);
+router.put('/occurrence-rules/:key', authenticateToken, authorizeRoles('teacher', 'admin', 'sudo'), configController.updateOccurrenceRule);
+
 module.exports = router;

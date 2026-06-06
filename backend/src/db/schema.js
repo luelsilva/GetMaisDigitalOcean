@@ -276,3 +276,34 @@ module.exports = {
     internshipOccurrences
 };
 
+const occurrenceRules = pgTable('occurrence_rules', {
+    key: varchar('key', { length: 50 }).primaryKey(),
+    name: varchar('name', { length: 100 }).notNull(),
+    daysLimit: integer('days_limit').notNull().default(0),
+    descriptionTemplate: text('description_template').notNull(),
+    isActive: boolean('is_active').notNull().default(true),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});
+
+module.exports = {
+    profiles,
+    otpCodes,
+    refreshTokens,
+    menuSections,
+    menuItems,
+    courses,
+    teachers,
+    courseTeachers,
+    formModels,
+    internships,
+    internshipsHistory,
+    keepAlive,
+    appSettings,
+    emailLogs,
+    alunos,
+    observacoesAlunos,
+    situacaoAluno,
+    internshipOccurrences,
+    occurrenceRules
+};
+

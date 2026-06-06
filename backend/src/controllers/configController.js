@@ -1,5 +1,5 @@
 const { db } = require('../db');
-const { appSettings } = require('../db/schema');
+const { appSettings, occurrenceRules } = require('../db/schema');
 const { eq } = require('drizzle-orm');
 
 exports.getFeatureFlags = async (req, res) => {
@@ -51,5 +51,43 @@ exports.updateFeatureFlags = async (req, res) => {
     } catch (error) {
         console.error('[CONFIG CONTROLLER UPDATE ERR]', error);
         res.status(500).json({ error: 'Erro ao salvar configurações' });
+    }
+};
+
+exports.getOccurrenceRules = async (req, res) => {
+    try {
+        const rules = await db.select().from(occurrenceRules);
+        res.json(rules);
+    } catch (error) {
+        console.error('[CONFIG CONTROLLER RULES GET ERR]', error);
+        res.status(500).json({ error: 'Erro ao carregar regras de ocorrências' });
+    }
+};
+
+exports.updateOccurrenceRule = async (req, res) => {
+    try {
+        const { key } = req.params;
+        const { name, daysLimit, descriptionTemplate, isActive } = req.body;
+
+        const updateFields = {};
+        if (name !== undefined) updateFields.name = name;
+        if (daysLimit !== undefined) updateFields.daysLimit = Number(daysLimit);
+        if (descriptionTemplate !== undefined) updateFields.descriptionTemplate = descriptionTemplate;
+        if (isActive !== undefined) updateFields.isActive = !!isActive;
+        updateFields.updatedAt = new Date();
+
+        const [updated] = await db.update(occurrenceRules)
+            .set(updateFields)
+            .where(eq(occurrenceRules.key, key))
+            .returning();
+
+        if (!updated) {
+            return res.status(404).json({ error: 'Regra de ocorrência não encontrada' });
+        }
+
+        res.json({ success: true, message: 'Regra atualizada com sucesso', rule: updated });
+    } catch (error) {
+        console.error('[CONFIG CONTROLLER RULE UPDATE ERR]', error);
+        res.status(500).json({ error: 'Erro ao salvar regra de ocorrência' });
     }
 };

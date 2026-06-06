@@ -9,6 +9,43 @@
     let loading = false;
     let message = { text: '', type: '' };
 
+    let rules = data.occurrenceRules || [];
+    let rulesLoading = false;
+    let rulesMessage = { text: '', type: '' };
+
+    async function saveRules() {
+        rulesLoading = true;
+        rulesMessage = { text: '', type: '' };
+        
+        try {
+            const promises = rules.map(rule => {
+                return apiFetch(`/config/occurrence-rules/${rule.key}`, {
+                    method: 'PUT',
+                    body: JSON.stringify({
+                        name: rule.name,
+                        daysLimit: rule.daysLimit,
+                        descriptionTemplate: rule.descriptionTemplate,
+                        isActive: rule.isActive
+                    })
+                });
+            });
+
+            const results = await Promise.all(promises);
+            const allOk = results.every(res => res.ok);
+
+            if (allOk) {
+                rulesMessage = { text: 'Regras de ocorrências salvas com sucesso!', type: 'success' };
+            } else {
+                rulesMessage = { text: 'Erro ao salvar algumas regras de ocorrências', type: 'error' };
+            }
+        } catch (err) {
+            rulesMessage = { text: 'Falha na comunicação com o servidor', type: 'error' };
+        } finally {
+            rulesLoading = false;
+            setTimeout(() => { rulesMessage = { text: '', type: '' }; }, 3000);
+        }
+    }
+
     async function saveSettings() {
         loading = true;
         message = { text: '', type: '' };
@@ -102,6 +139,81 @@
                         <span class="spinner"></span> Salvando...
                     {:else}
                         Salvar Alterações
+                    {/if}
+                </button>
+            </footer>
+        </section>
+
+        <section class="settings-card">
+            <div class="card-header">
+                <span class="icon">⚠️</span>
+                <h2>Regras de Atenção de Estágio (Ocorrências)</h2>
+            </div>
+            
+            <div class="settings-list">
+                <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1.5rem;">
+                    Configure os prazos de tolerância, mensagens de alerta e quais conferências automáticas o sistema deve processar diariamente.
+                </p>
+
+                {#each rules as rule, idx}
+                    <div class="rule-item" style="border-bottom: 1px solid #f1f5f9; padding-bottom: 1.5rem; margin-bottom: 1.5rem; {idx === rules.length - 1 ? 'border-bottom: none; margin-bottom: 0; padding-bottom: 0;' : ''}">
+                        <div class="rule-info-row" style="display: flex; justify-content: space-between; align-items: flex-start; gap: 2rem;">
+                            <div class="setting-info" style="flex: 1;">
+                                <h3 style="font-size: 1.05rem; font-weight: 600; color: #1e293b; margin-bottom: 0.25rem;">{rule.name}</h3>
+                                <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 0.5rem;">Chave técnica: <code style="background: #f1f5f9; padding: 0.1rem 0.3rem; border-radius: 4px; font-size: 0.75rem; font-family: monospace;">{rule.key}</code></p>
+                            </div>
+                            <div class="setting-control">
+                                <label class="switch">
+                                    <input type="checkbox" bind:checked={rule.isActive}>
+                                    <span class="slider round"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        {#if rule.isActive}
+                            <div class="rule-details" style="display: grid; gap: 1rem; margin-top: 0.75rem; background: #f8fafc; padding: 1rem; border-radius: 12px; border: 1px solid #e2e8f0;">
+                                <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+                                    <label style="font-size: 0.85rem; font-weight: 600; min-width: 150px; color: #475569;">Prazo de Alerta (Dias):</label>
+                                    <input 
+                                        type="number" 
+                                        bind:value={rule.daysLimit} 
+                                        min="0"
+                                        style="max-width: 80px; padding: 0.4rem; border-radius: 6px; border: 1px solid #cbd5e1; outline: none; font-size: 0.9rem;"
+                                    />
+                                    <span style="font-size: 0.8rem; color: #64748b;">(dias de tolerância antes de disparar o alerta)</span>
+                                </div>
+                                <div style="display: grid; gap: 0.35rem;">
+                                    <label style="font-size: 0.85rem; font-weight: 600; color: #475569;">Template da Mensagem:</label>
+                                    <textarea 
+                                        bind:value={rule.descriptionTemplate}
+                                        rows="2"
+                                        style="width: 100%; padding: 0.5rem; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.85rem; resize: vertical; outline: none; line-height: 1.5; color: #334155;"
+                                    ></textarea>
+                                    <span style="font-size: 0.75rem; color: #64748b;">Variáveis suportadas: <code style="background: #f1f5f9; padding: 0.1rem 0.2rem; border-radius: 3px; font-family: monospace;">{"{date}"}</code>, <code style="background: #f1f5f9; padding: 0.1rem 0.2rem; border-radius: 3px; font-family: monospace;">{"{days_limit}"}</code>, <code style="background: #f1f5f9; padding: 0.1rem 0.2rem; border-radius: 3px; font-family: monospace;">{"{status}"}</code></span>
+                                </div>
+                            </div>
+                        {/if}
+                    </div>
+                {/each}
+            </div>
+
+            <footer class="card-footer">
+                {#if rulesMessage.text}
+                    <div class="alert {rulesMessage.type}" role="alert" style="margin-right: auto;">
+                        {rulesMessage.text}
+                    </div>
+                {/if}
+                
+                <button 
+                    class="btn-save" 
+                    on:click={saveRules} 
+                    disabled={rulesLoading}
+                    style="background: #2563eb; color: white;"
+                >
+                    {#if rulesLoading}
+                        <span class="spinner"></span> Salvando...
+                    {:else}
+                        Salvar Regras
                     {/if}
                 </button>
             </footer>
