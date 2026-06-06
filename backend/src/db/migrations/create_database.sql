@@ -328,7 +328,8 @@ CREATE TABLE IF NOT EXISTS "internships" (
     "updated_at" TIMESTAMPTZ DEFAULT now() NOT NULL,
     "deleted_at" TIMESTAMPTZ,
     "last_modified_by" UUID REFERENCES profiles(id) ON DELETE SET NULL,
-    "status" internship_status DEFAULT 'DRAFT' NOT NULL
+    "status" internship_status DEFAULT 'DRAFT' NOT NULL,
+    "has_occurrences" boolean DEFAULT false NOT NULL
 );
 ALTER TABLE internships ENABLE ROW LEVEL SECURITY;
 
@@ -344,6 +345,25 @@ CREATE TRIGGER internships_updated_at_trigger
     EXECUTE FUNCTION update_updated_at_column();
 
 COMMENT ON TABLE internships IS 'Tabela de estágios criada a partir do formulário TCE';
+
+
+-- ============================================
+-- OCORRÊNCIAS DE ESTÁGIOS (ALERTAS/PENDÊNCIAS)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS "internship_occurrences" (
+    "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    "internship_id" UUID NOT NULL REFERENCES internships(id) ON DELETE CASCADE,
+    "rule_key" VARCHAR(50) NOT NULL,
+    "description" TEXT NOT NULL,
+    "created_at" TIMESTAMPTZ DEFAULT now() NOT NULL,
+    "resolved_at" TIMESTAMPTZ,
+    "resolved_by" UUID REFERENCES profiles(id) ON DELETE SET NULL
+);
+ALTER TABLE internship_occurrences ENABLE ROW LEVEL SECURITY;
+
+CREATE INDEX IF NOT EXISTS "idx_internship_occurrences_internship_id" ON "internship_occurrences"("internship_id");
+
 
 
 -- ============================================

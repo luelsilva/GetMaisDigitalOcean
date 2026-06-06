@@ -62,9 +62,20 @@ app.use((req, res) => {
 // Tratamento de Erros
 app.use(errorHandler);
 
+const { checkAllOccurrences } = require('./services/occurrenceService');
+
 // Inicialização
 app.listen(config.port, () => {
     console.log(`Servidor rodando em: http://localhost:${config.port}`);
     console.log('='.repeat(50));
 
+    // Executar verificação de ocorrências no startup (atrasado por 5s)
+    setTimeout(() => {
+        checkAllOccurrences().catch(err => console.error('[STARTUP CRON] Erro ao verificar ocorrências:', err));
+    }, 5000);
+
+    // Agendar verificação para rodar a cada 24 horas
+    setInterval(() => {
+        checkAllOccurrences().catch(err => console.error('[DAILY CRON] Erro ao verificar ocorrências:', err));
+    }, 24 * 60 * 60 * 1000);
 });

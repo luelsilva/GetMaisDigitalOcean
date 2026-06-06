@@ -8,4 +8,8 @@ router.get('/ping', keepAliveController.ping);
 // Rota para limpar a tabela
 router.delete('/clear', keepAliveController.clear);
 
+// Rota para verificar ocorrências
+router.get('/check-occurrences', keepAliveController.checkOccurrences);
+router.post('/check-occurrences', keepAliveController.checkOccurrences);
+
 module.exports = router;

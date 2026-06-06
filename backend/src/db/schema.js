@@ -133,7 +133,8 @@ const internships = pgTable('internships', {
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
     lastModifiedBy: uuid('last_modified_by').references(() => profiles.id, { onDelete: 'set null' }),
-    status: internshipStatusEnum('status').default('DRAFT').notNull()
+    status: internshipStatusEnum('status').default('DRAFT').notNull(),
+    hasOccurrences: boolean('has_occurrences').notNull().default(false)
 });
 
 const appSettings = pgTable('app_settings', {
@@ -240,6 +241,20 @@ const situacaoAluno = pgTable('situacao_aluno', {
     nome: varchar('nome', { length: 100 }).notNull().unique()
 });
 
+const internshipOccurrences = pgTable('internship_occurrences', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    internshipId: uuid('internship_id').notNull().references(() => internships.id, { onDelete: 'cascade' }),
+    ruleKey: varchar('rule_key', { length: 50 }).notNull(),
+    description: text('description').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+    resolvedBy: uuid('resolved_by').references(() => profiles.id, { onDelete: 'set null' })
+}, (table) => {
+    return {
+        ixInternshipOccurrencesInternshipId: index('ix_internship_occurrences_internship_id').on(table.internshipId)
+    };
+});
+
 module.exports = {
     profiles,
     otpCodes,
@@ -257,6 +272,7 @@ module.exports = {
     emailLogs,
     alunos,
     observacoesAlunos,
-    situacaoAluno
+    situacaoAluno,
+    internshipOccurrences
 };
 
