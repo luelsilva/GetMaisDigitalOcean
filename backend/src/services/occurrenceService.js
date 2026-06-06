@@ -165,18 +165,18 @@ async function checkAllOccurrences() {
                 }
             }
 
-            // --- REGRA 7: STARTED com início passado ---
-            // se internships.status = 'STARTED' e internships.start_date já passou a mais de x dias
-            const r7 = rulesMap.get('started_date_passed_limit') || { daysLimit: 30, isActive: true, descriptionTemplate: 'Estágio está ativo há mais de {days_limit} dias (iniciou em {date}). Solicitar relatório de atividades.' };
+            // --- REGRA 7: STARTED com término passado ---
+            // se internships.status = 'STARTED' e internships.end_date já passou a mais de x dias
+            const r7 = rulesMap.get('started_end_date_passed_limit') || { daysLimit: 0, isActive: true, descriptionTemplate: 'Estágio está com status \'Estagiando\' (STARTED), mas a data de término ({date}) já passou há mais de {days_limit} dias.' };
             let rule7Met = false;
             let rule7Desc = '';
-            if (r7.isActive && internship.startDate) {
-                const startLimit = new Date(internship.startDate);
-                startLimit.setDate(startLimit.getDate() + r7.daysLimit);
-                rule7Met = (status === 'STARTED') && startLimit <= today;
+            if (r7.isActive && internship.endDate) {
+                const endLimit = new Date(internship.endDate);
+                endLimit.setDate(endLimit.getDate() + r7.daysLimit);
+                rule7Met = (status === 'STARTED') && endLimit <= today;
                 if (rule7Met) {
                     rule7Desc = interpolateTemplate(r7.descriptionTemplate, {
-                        date: formatDatePtBR(internship.startDate),
+                        date: formatDatePtBR(internship.endDate),
                         days_limit: r7.daysLimit
                     });
                 }
@@ -206,7 +206,7 @@ async function checkAllOccurrences() {
                 { key: 'waiting_approval_inactive_limit', met: rule4Met, description: rule4Desc, active: r4.isActive },
                 { key: 'revision_requested_inactive_limit', met: rule5Met, description: rule5Desc, active: r5.isActive },
                 { key: 'approved_inactive_limit', met: rule6Met, description: rule6Desc, active: r6.isActive },
-                { key: 'started_date_passed_limit', met: rule7Met, description: rule7Desc, active: r7.isActive },
+                { key: 'started_end_date_passed_limit', met: rule7Met, description: rule7Desc, active: r7.isActive },
                 { key: 'finished_date_passed_limit', met: rule8Met, description: rule8Desc, active: r8.isActive }
             ];
 
