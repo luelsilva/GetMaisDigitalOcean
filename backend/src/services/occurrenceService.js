@@ -268,16 +268,6 @@ async function checkAllOccurrences() {
                 .where(inArray(internshipOccurrences.id, occurrenceIdsToResolve));
         }
 
-        // 7. Sincronizar status hasOccurrences do estágio via SQL nativo
-        await db.execute(sql`
-            UPDATE internships i
-            SET has_occurrences = EXISTS (
-                SELECT 1 FROM internship_occurrences io
-                WHERE io.internship_id = i.id AND io.resolved_at IS NULL
-            )
-            WHERE i.deleted_at IS NULL
-        `);
-
         console.log(`[OCCURRENCE CHECK] Concluído de forma otimizada. Novas: ${occurrencesToInsert.length}, Auto-resolvidas: ${occurrenceIdsToResolve.length}`);
     } catch (error) {
         console.error('[OCCURRENCE CHECK ERROR] Falha ao executar verificação:', error);

@@ -133,8 +133,7 @@ const internships = pgTable('internships', {
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
     lastModifiedBy: uuid('last_modified_by').references(() => profiles.id, { onDelete: 'set null' }),
-    status: internshipStatusEnum('status').default('DRAFT').notNull(),
-    hasOccurrences: boolean('has_occurrences').notNull().default(false)
+    status: internshipStatusEnum('status').default('DRAFT').notNull()
 });
 
 const appSettings = pgTable('app_settings', {

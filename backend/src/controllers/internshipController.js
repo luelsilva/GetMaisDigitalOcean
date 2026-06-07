@@ -24,7 +24,10 @@ exports.getAllInternships = async (req, res, next) => {
             updatedAt: internships.updatedAt,
             lastModifiedBy: internships.lastModifiedBy,
             status: internships.status,
-            hasOccurrences: internships.hasOccurrences,
+            hasOccurrences: sql`EXISTS (
+                SELECT 1 FROM ${internshipOccurrences} io
+                WHERE io.internship_id = ${internships.id} AND io.resolved_at IS NULL
+            )`.mapWith(Boolean),
         };
 
         let query = db.select(queryFields).from(internships);
@@ -756,10 +759,6 @@ exports.resolveInternshipOccurrence = async (req, res, next) => {
             );
 
         const hasOccurrencesNow = pending.length > 0;
-
-        await db.update(internships)
-            .set({ hasOccurrences: hasOccurrencesNow })
-            .where(eq(internships.id, id));
 
         res.json({
             message: resolved ? 'Ocorrência resolvida com sucesso' : 'Ocorrência reaberta com sucesso',
