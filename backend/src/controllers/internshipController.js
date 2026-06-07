@@ -26,7 +26,7 @@ exports.getAllInternships = async (req, res, next) => {
             status: internships.status,
             hasOccurrences: sql`EXISTS (
                 SELECT 1 FROM ${internshipOccurrences} io
-                WHERE io.internship_id = ${internships.id} AND io.resolved_at IS NULL
+                WHERE io.internship_id = "internships"."id" AND io.resolved_at IS NULL
             )`.mapWith(Boolean),
         };
 
