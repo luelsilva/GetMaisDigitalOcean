@@ -835,27 +835,7 @@
 									{/if}
 								</div>
 
-								<!-- Action button to resolve/reopen -->
-								{#if $user && ['teacher', 'admin', 'sudo'].includes($user.roles)}
-									<button
-										type="button"
-										onclick={() => toggleOccurrenceResolution(occ.id, !!occ.resolvedAt)}
-										class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl transition-all active:scale-95 {occ.resolvedAt ? 'bg-slate-200 hover:bg-slate-300 text-slate-600' : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm'}"
-										title={occ.resolvedAt ? "Reabrir Ocorrência" : "Marcar como Resolvida"}
-									>
-										{#if occ.resolvedAt}
-											<!-- Reopen Icon -->
-											<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 7.89M9 11l3-3 3 3m-3-3v12" />
-											</svg>
-										{:else}
-											<!-- Check Icon -->
-											<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-											</svg>
-										{/if}
-									</button>
-								{/if}
+
 							</div>
 						</div>
 					{/each}
