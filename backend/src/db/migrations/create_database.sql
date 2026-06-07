@@ -52,7 +52,7 @@ EXCEPTION WHEN duplicate_object THEN null; END $$;
 -- crie um novo job e configure para uma vez por dia
 -- coloque a função sql abaixo no cron
 --
---  INSERT INTO keep_alive DEFAULT VALUES;
+--  INSERT INTO keep_alive (description) VALUES ('Cron do Supabase');
 --
 -- ============================================
 CREATE TABLE IF NOT EXISTS keep_alive (
