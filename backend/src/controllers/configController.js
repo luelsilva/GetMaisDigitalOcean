@@ -96,7 +96,7 @@ exports.updateOccurrenceRule = async (req, res) => {
 exports.triggerOccurrenceCheck = async (req, res) => {
     try {
         // Executa em segundo plano para evitar timeout na requisição do cliente
-        checkAllOccurrences().catch(err => {
+        checkAllOccurrences('Disparo manual (Painel Admin)').catch(err => {
             console.error('[BACKGROUND CHECK ERR]', err);
         });
 

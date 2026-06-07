@@ -1,5 +1,5 @@
 const { db } = require('../db');
-const { internships, internshipOccurrences, occurrenceRules } = require('../db/schema');
+const { internships, internshipOccurrences, occurrenceRules, keepAlive } = require('../db/schema');
 const { eq, and, isNull, sql, inArray } = require('drizzle-orm');
 
 // Helper para formatar data do formato YYYY-MM-DD para DD/MM/YYYY
@@ -33,9 +33,17 @@ const statusLabels = {
 /**
  * Executa a verificação diária de ocorrências para todos os estágios ativos.
  */
-async function checkAllOccurrences() {
+async function checkAllOccurrences(description) {
     console.log('[OCCURRENCE CHECK] Iniciando verificação otimizada com 8 regras dinâmicas...');
     try {
+        if (description) {
+            try {
+                await db.insert(keepAlive).values({ description });
+                console.log(`[OCCURRENCE CHECK] Registro de keep_alive inserido: "${description}"`);
+            } catch (keepAliveErr) {
+                console.error('[OCCURRENCE CHECK] Erro ao inserir registro de keep_alive:', keepAliveErr);
+            }
+        }
         const now = new Date();
         const todayStr = now.toISOString().split('T')[0];
         const today = new Date(todayStr);

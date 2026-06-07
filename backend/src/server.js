@@ -71,11 +71,11 @@ app.listen(config.port, () => {
 
     // Executar verificação de ocorrências no startup (atrasado por 5s)
     setTimeout(() => {
-        checkAllOccurrences().catch(err => console.error('[STARTUP CRON] Erro ao verificar ocorrências:', err));
+        checkAllOccurrences("Inicialização do servidor").catch(err => console.error('[STARTUP CRON] Erro ao verificar ocorrências:', err));
     }, 5000);
 
     // Agendar verificação para rodar a cada 24 horas
     setInterval(() => {
-        checkAllOccurrences().catch(err => console.error('[DAILY CRON] Erro ao verificar ocorrências:', err));
+        checkAllOccurrences("Verificação diária").catch(err => console.error('[DAILY CRON] Erro ao verificar ocorrências:', err));
     }, 24 * 60 * 60 * 1000);
 });

@@ -57,6 +57,7 @@ EXCEPTION WHEN duplicate_object THEN null; END $$;
 -- ============================================
 CREATE TABLE IF NOT EXISTS keep_alive (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  description TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 ALTER TABLE keep_alive ENABLE ROW LEVEL SECURITY;

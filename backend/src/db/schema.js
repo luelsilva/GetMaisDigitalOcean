@@ -99,6 +99,7 @@ const courseTeachers = pgTable('course_teachers', {
 
 const keepAlive = pgTable('keep_alive', {
     id: uuid('id').primaryKey().defaultRandom(),
+    description: text('description'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow()
 });
 

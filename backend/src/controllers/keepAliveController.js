@@ -11,7 +11,7 @@ const keepAliveController = {
             }
 
             // Executa a verificação
-            await checkAllOccurrences();
+            await checkAllOccurrences('Chamada de API /check-occurrences');
 
             res.status(200).json({
                 status: 'success',
