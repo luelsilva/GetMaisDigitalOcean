@@ -496,6 +496,9 @@
 									>Criado em</th
 								>
 								<th class="px-6 py-4 text-xs font-black tracking-wider text-slate-500 uppercase"
+									>Modificado em</th
+								>
+								<th class="px-6 py-4 text-xs font-black tracking-wider text-slate-500 uppercase"
 									>Status</th
 								>
 
@@ -557,6 +560,15 @@
 									>
 									<td class="px-6 py-4 text-sm whitespace-nowrap text-slate-400"
 										>{new Date(item.createdAt).toLocaleString('pt-BR', {
+											day: '2-digit',
+											month: '2-digit',
+											year: 'numeric',
+											hour: '2-digit',
+											minute: '2-digit'
+										})}</td
+									>
+									<td class="px-6 py-4 text-sm whitespace-nowrap text-slate-400"
+										>{new Date(item.updatedAt).toLocaleString('pt-BR', {
 											day: '2-digit',
 											month: '2-digit',
 											year: 'numeric',
