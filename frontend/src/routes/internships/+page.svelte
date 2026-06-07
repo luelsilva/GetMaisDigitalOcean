@@ -474,36 +474,36 @@
 					<table class="w-full border-collapse text-left">
 						<thead>
 							<tr class="border-b border-slate-100 bg-slate-50">
-								<th class="px-6 py-4 text-xs font-black tracking-wider text-slate-500 uppercase"
+								<th class="px-3 py-4 text-xs font-black tracking-wider text-slate-500 uppercase"
 									>Matrícula</th
 								>
-								<th class="px-6 py-4 text-xs font-black tracking-wider text-slate-500 uppercase"
+								<th class="px-3 py-4 text-xs font-black tracking-wider text-slate-500 uppercase"
 									>Nome Aluno</th
 								>
-								<th class="px-6 py-4 text-xs font-black tracking-wider text-slate-500 uppercase"
+								<th class="px-3 py-4 text-xs font-black tracking-wider text-slate-500 uppercase"
 									>Curso</th
 								>
-								<th class="px-6 py-4 text-xs font-black tracking-wider text-slate-500 uppercase"
+								<th class="px-3 py-4 text-xs font-black tracking-wider text-slate-500 uppercase"
 									>Empresa</th
 								>
-								<th class="px-6 py-4 text-xs font-black tracking-wider text-slate-500 uppercase"
+								<th class="px-3 py-4 text-xs font-black tracking-wider text-slate-500 uppercase"
 									>Início</th
 								>
-								<th class="px-6 py-4 text-xs font-black tracking-wider text-slate-500 uppercase"
+								<th class="px-3 py-4 text-xs font-black tracking-wider text-slate-500 uppercase"
 									>Final</th
 								>
-								<th class="px-6 py-4 text-xs font-black tracking-wider text-slate-500 uppercase"
+								<th class="px-3 py-4 text-xs font-black tracking-wider text-slate-500 uppercase"
 									>Criado em</th
 								>
-								<th class="px-6 py-4 text-xs font-black tracking-wider text-slate-500 uppercase"
+								<th class="px-3 py-4 text-xs font-black tracking-wider text-slate-500 uppercase"
 									>Modificado em</th
 								>
-								<th class="px-6 py-4 text-xs font-black tracking-wider text-slate-500 uppercase"
+								<th class="px-3 py-4 text-xs font-black tracking-wider text-slate-500 uppercase"
 									>Status</th
 								>
 
 								<th
-									class="px-6 py-4 text-center text-xs font-black tracking-wider text-slate-500 uppercase"
+									class="px-3 py-4 text-center text-xs font-black tracking-wider text-slate-500 uppercase"
 									>Ações</th
 								>
 							</tr>
@@ -514,10 +514,10 @@
 									in:fly={{ x: -10, duration: 300, delay: i * 20 }}
 									class="group transition-colors hover:bg-indigo-50/30"
 								>
-									<td class="px-6 py-4 font-mono text-sm text-slate-600"
+									<td class="px-3 py-4 font-mono text-sm text-slate-600"
 										>{item.studentRegistration || '-'}</td
 									>
-									<td class="px-6 py-4">
+									<td class="px-3 py-4">
 										<div class="flex items-center gap-2">
 											<div class="text-sm font-bold text-slate-800">{item.studentName}</div>
 											{#if item.hasOccurrences && $user && ['teacher', 'admin', 'sudo'].includes($user.roles)}
@@ -544,21 +544,21 @@
 											{/if}
 										</div>
 									</td>
-									<td class="px-6 py-4">
+									<td class="px-3 py-4">
 										<span
 											class="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-black text-indigo-700 transition-colors group-hover:bg-indigo-200"
 										>
 											{item.courseSigla}
 										</span>
 									</td>
-									<td class="px-6 py-4 text-sm font-medium text-slate-700">{item.companyName}</td>
-									<td class="px-6 py-4 text-sm whitespace-nowrap text-slate-500"
+									<td class="px-3 py-4 text-sm font-medium text-slate-700">{item.companyName}</td>
+									<td class="px-3 py-4 text-sm whitespace-nowrap text-slate-500"
 										>{formatDate(item.startDate)}</td
 									>
-									<td class="px-6 py-4 text-sm whitespace-nowrap text-slate-500"
+									<td class="px-3 py-4 text-sm whitespace-nowrap text-slate-500"
 										>{formatDate(item.endDate)}</td
 									>
-									<td class="px-6 py-4 text-sm whitespace-nowrap text-slate-400"
+									<td class="px-3 py-4 text-sm whitespace-nowrap text-slate-400"
 										>{new Date(item.createdAt).toLocaleString('pt-BR', {
 											day: '2-digit',
 											month: '2-digit',
@@ -567,7 +567,7 @@
 											minute: '2-digit'
 										})}</td
 									>
-									<td class="px-6 py-4 text-sm whitespace-nowrap text-slate-400"
+									<td class="px-3 py-4 text-sm whitespace-nowrap text-slate-400"
 										>{new Date(item.updatedAt).toLocaleString('pt-BR', {
 											day: '2-digit',
 											month: '2-digit',
@@ -576,8 +576,8 @@
 											minute: '2-digit'
 										})}</td
 									>
-
-									<td class="px-6 py-4">
+ 
+									<td class="px-3 py-4">
 										{#if item.status === 'DRAFT'}
 											<span
 												class="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-2.5 py-0.5 text-[10px] font-black tracking-tight text-slate-600 uppercase"
@@ -634,8 +634,8 @@
 											</span>
 										{/if}
 									</td>
-
-									<td class="px-6 py-4 text-center">
+ 
+									<td class="px-3 py-4 text-center">
 										<div class="flex items-center justify-center gap-2">
 											<a
 												href="/gotce/v2?id={item.id}"
@@ -653,7 +653,7 @@
 													/>
 												</svg>
 											</a>
-
+ 
 											<button
 												class="rounded-lg p-2 text-red-500 transition-colors hover:bg-red-50 disabled:opacity-30"
 												title="Excluir"
@@ -690,7 +690,7 @@
 
 							{#if internships.length === 0}
 								<tr>
-									<td colspan="9" class="px-6 py-20 text-center">
+									<td colspan="9" class="px-3 py-20 text-center">
 										<div class="flex flex-col items-center space-y-2">
 											<svg
 												class="h-12 w-12 text-slate-200"
