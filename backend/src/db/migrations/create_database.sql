@@ -57,6 +57,7 @@ EXCEPTION WHEN duplicate_object THEN null; END $$;
 -- ============================================
 CREATE TABLE IF NOT EXISTS keep_alive (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  description TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 ALTER TABLE keep_alive ENABLE ROW LEVEL SECURITY;
@@ -328,7 +329,8 @@ CREATE TABLE IF NOT EXISTS "internships" (
     "updated_at" TIMESTAMPTZ DEFAULT now() NOT NULL,
     "deleted_at" TIMESTAMPTZ,
     "last_modified_by" UUID REFERENCES profiles(id) ON DELETE SET NULL,
-    "status" internship_status DEFAULT 'DRAFT' NOT NULL
+    "status" internship_status DEFAULT 'DRAFT' NOT NULL,
+    "has_occurrences" boolean DEFAULT false NOT NULL
 );
 ALTER TABLE internships ENABLE ROW LEVEL SECURITY;
 
@@ -344,6 +346,50 @@ CREATE TRIGGER internships_updated_at_trigger
     EXECUTE FUNCTION update_updated_at_column();
 
 COMMENT ON TABLE internships IS 'Tabela de estágios criada a partir do formulário TCE';
+
+
+-- ============================================
+-- OCORRÊNCIAS DE ESTÁGIOS (ALERTAS/PENDÊNCIAS)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS "internship_occurrences" (
+    "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    "internship_id" UUID NOT NULL REFERENCES internships(id) ON DELETE CASCADE,
+    "rule_key" VARCHAR(50) NOT NULL,
+    "description" TEXT NOT NULL,
+    "created_at" TIMESTAMPTZ DEFAULT now() NOT NULL,
+    "resolved_at" TIMESTAMPTZ,
+    "resolved_by" UUID REFERENCES profiles(id) ON DELETE SET NULL
+);
+ALTER TABLE internship_occurrences ENABLE ROW LEVEL SECURITY;
+
+CREATE INDEX IF NOT EXISTS "idx_internship_occurrences_internship_id" ON "internship_occurrences"("internship_id");
+
+
+-- ============================================
+-- REGRAS DE OCORRÊNCIAS DE ESTÁGIOS
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS "occurrence_rules" (
+    "key" VARCHAR(50) PRIMARY KEY,
+    "name" VARCHAR(100) NOT NULL,
+    "days_limit" INTEGER NOT NULL DEFAULT 0,
+    "description_template" TEXT NOT NULL,
+    "is_active" BOOLEAN NOT NULL DEFAULT true,
+    "updated_at" TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+ALTER TABLE occurrence_rules ENABLE ROW LEVEL SECURITY;
+
+INSERT INTO "occurrence_rules" ("key", "name", "days_limit", "description_template", "is_active") VALUES
+('start_date_passed_not_started', 'Data de Início Vencida (Não Iniciado)', 0, 'A data de início ({date}) já venceu há mais de {days_limit} dias, mas o status é ''{status}'' (deveria ser ''Estagiando'' - STARTED).', true),
+('end_date_passed_not_finished', 'Data de Término Vencida (Não Finalizado)', 0, 'A data de término ({date}) já passou há mais de {days_limit} dias, mas o status é ''{status}'' (deveria ser ''Finalizado'' - FINISHED).', true),
+('draft_inactive_limit', 'Rascunho Sem Atualização', 7, 'Este contrato está em rascunho sem movimentações desde {date} (há mais de {days_limit} dias).', true),
+('waiting_approval_inactive_limit', 'Aprovação Pendente Parada', 5, 'Contrato aguardando aprovação sem movimentações desde {date} (há mais de {days_limit} dias).', true),
+('revision_requested_inactive_limit', 'Revisão Solicitada Parada', 5, 'Revisão solicitada sem movimentações desde {date} (há mais de {days_limit} dias).', true),
+('approved_inactive_limit', 'Aprovado sem Iniciar', 5, 'Contrato aprovado há mais de {days_limit} dias ({date}), mas o status ainda não foi alterado.', true),
+('started_end_date_passed_limit', 'Estágio Ativo com Fim Vencido', 0, 'Estágio está com status ''Estagiando'' (STARTED), mas a data de término ({date}) já passou há mais de {days_limit} dias.', true),
+('finished_date_passed_limit', 'Estágio Finalizado sem Arquivo', 15, 'Estágio finalizado em {date} (há mais de {days_limit} dias), mas ainda não foi arquivado.', true)
+ON CONFLICT ("key") DO NOTHING;
 
 
 -- ============================================
@@ -445,7 +491,7 @@ COMMENT ON TABLE app_settings IS 'Tabela de configurações globais e Feature Fl
 
 -- Inserir flag inicial para o Novo TCE (desativado por padrão)
 INSERT INTO app_settings (key, value) 
-VALUES ('feature_flags', '{"use_tce_v2": false}')
+VALUES ('feature_flags', '{"use_tce_v2": false, "enable_tce_buttons": false}')
 ON CONFLICT (key) DO NOTHING;
 
 
@@ -484,3 +530,83 @@ CREATE TRIGGER email_logs_updated_at_trigger
 COMMENT ON TABLE email_logs IS 'Registro de todos os e-mails enviados pelo Resend, com histórico de status via webhooks';
 COMMENT ON COLUMN email_logs.resend_id IS 'ID retornado pela API do Resend, usado para correlacionar eventos de webhook';
 COMMENT ON COLUMN email_logs.events IS 'Array JSONB com o histórico cronológico de todos os eventos recebidos do Resend';
+
+
+-- ============================================
+-- TABELAS DO PROCESSADOR DE ALUNOS
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS public.alunos (
+    id SERIAL PRIMARY KEY,
+    matriz TEXT,
+    curso_id UUID REFERENCES public.courses(id),
+    turno TEXT,
+    modulo TEXT,
+    turma TEXT,
+    turma_codigo TEXT,
+    periodo TEXT,
+    matricula TEXT,
+    estudante TEXT,
+    sexo TEXT,
+    data_nascimento TEXT,
+    situacao TEXT,
+    identidade TEXT,
+    cpf TEXT,
+    celular_aluno TEXT,
+    telefone_residencial TEXT,
+    email TEXT,
+    celular_responsavel TEXT,
+    nome_mae TEXT,
+    endereco TEXT,
+    complemento TEXT,
+    bairro TEXT,
+    cep TEXT,
+    municipio TEXT,
+    
+    -- NOVOS CAMPOS (Para preenchimento futuro)
+    porcentagem_dispensa INTEGER,
+    nota_estagio NUMERIC(4,1),
+    data_entrega_relatorio DATE,
+    data_inicio_estagio DATE,
+    data_fim_estagio DATE,
+    ano_inicio_curso INTEGER,
+    semestre_inicio_curso TEXT,
+    total_horas_estagio INTEGER,
+    CONSTRAINT uix_turma_cpf UNIQUE (turma_codigo, cpf)
+);
+ALTER TABLE public.alunos ENABLE ROW LEVEL SECURITY;
+
+CREATE INDEX IF NOT EXISTS ix_alunos_turma ON public.alunos (turma);
+CREATE INDEX IF NOT EXISTS ix_alunos_matricula ON public.alunos (matricula);
+
+CREATE TABLE IF NOT EXISTS public.observacoes_alunos (
+    id SERIAL PRIMARY KEY,
+    aluno_id INTEGER REFERENCES public.alunos(id) ON DELETE CASCADE,
+    data_anotacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    texto TEXT NOT NULL,
+    nome_professor TEXT NOT NULL
+);
+ALTER TABLE public.observacoes_alunos ENABLE ROW LEVEL SECURITY;
+
+CREATE INDEX IF NOT EXISTS ix_observacoes_aluno_id ON public.observacoes_alunos (aluno_id);
+
+-- ============================================
+-- TABELA: situacao_aluno (Opções de Situação)
+-- ============================================
+CREATE TABLE IF NOT EXISTS public.situacao_aluno (
+    id SERIAL PRIMARY KEY,
+    nome VARCHAR(100) NOT NULL UNIQUE
+);
+ALTER TABLE public.situacao_aluno ENABLE ROW LEVEL SECURITY;
+
+INSERT INTO public.situacao_aluno (nome) VALUES
+('Aprovado'),
+('Reprovado'),
+('Desistente'),
+('Estagiando'),
+('Cursando'),
+('Venceu'),
+('Pendente')
+ON CONFLICT (nome) DO NOTHING;
+
+

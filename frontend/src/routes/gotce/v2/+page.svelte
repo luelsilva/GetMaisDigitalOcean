@@ -13,17 +13,34 @@
 			mode: 'new' | 'edit';
 			internship_status: string;
 			user_role: string;
+			features?: {
+				enable_tce_buttons?: boolean;
+			};
 		};
 	}
 
 	let { data: pageData }: Props = $props();
 	let form = $derived(pageData.form);
+	let enableTceButtons = $derived(pageData.features?.enable_tce_buttons || false);
 
-	let pageConfig = $derived.by(() => {
+	interface PageConfig {
+		message: string;
+		canSave: boolean;
+		canPDF: boolean;
+		canSubmitForApproval: boolean;
+		canApprove: boolean;
+		canReject: boolean;
+		canStart: boolean;
+		canFinish: boolean;
+		readonly: boolean;
+		saveLabel: string;
+	}
+
+	let pageConfig = $derived.by<PageConfig>(() => {
 		const { mode, internship_status, user_role } = pageData;
 		const isProf = ['teacher', 'admin', 'sudo'].includes(user_role);
 
-		let config = {
+		let config: PageConfig = {
 			message: '',
 			canSave: false,
 			canPDF: false,
@@ -67,13 +84,14 @@
 				config.message = `
 					<p class="text-lg font-bold text-slate-800">O TCE encontra-se em edição.</p>
 					<p class="text-lg font-bold text-slate-800">Preencha os dados solicitados e clique em Atualizar Estágio.</p>
-					<p class="text-lg font-bold text-slate-800">Depois, clique em Enviar para o professor avaliar.</p>
+					<p class="text-lg font-bold text-slate-800">Depois, envie para o professor avaliar.</p>
 				`;
 			}
 		} else if (internship_status === 'DRAFT') {
 			config.canPDF = true;
 			if (isProf) {
 				config.canSave = true;
+				config.canApprove = true;
 				config.canStart = true;
 				config.canFinish = true;
 				config.readonly = false;
@@ -89,7 +107,7 @@
 				config.message = `
 					<p class="text-lg font-bold text-slate-800">O TCE encontra-se em edição.</p>
 					<p class="text-lg font-bold text-slate-800">Preencha os dados solicitados e clique em Atualizar Estágio.</p>
-					<p class="text-lg font-bold text-slate-800">Depois, clique em Enviar para o professor avaliar.</p>
+					<p class="text-lg font-bold text-slate-800">Depois, envie para o professor avaliar.</p>
 				`;
 			}
 		} else if (internship_status === 'WAITING_APPROVAL') {
@@ -103,12 +121,16 @@
 				config.readonly = false;
 				config.message = `
 					<p class="text-lg font-bold text-slate-800">Professor, o TCE aguarda sua aprovação.</p>
-					<p class="text-lg font-bold text-slate-800">Revise as informações e clique em Aprovar Estágio ou Devolver.</p>
+					<p class="text-lg font-bold text-slate-800">Revise as informações e clique em Atualizar status para aprovado ou Devolver.</p>
 				`;
 			} else {
+				config.canSave = true;
+				config.canPDF = true;
+				config.canSubmitForApproval = true;
+				config.readonly = false;
 				config.message = `
 					<p class="text-lg font-bold text-slate-800">O TCE foi enviado para aprovação do professor.</p>
-					<p class="text-lg font-bold text-slate-800">Aguarde a avaliação.</p>
+					<p class="text-lg font-bold text-slate-800">Caso precise fazer ajustes, edite e reenvie para avaliação.</p>
 				`;
 			}
 		} else if (internship_status === 'REVISION_REQUESTED') {
@@ -917,7 +939,8 @@
 			});
 
 			if (response.ok) {
-				// Envia email de aprovação para a empresa (endpoint já faz join com profiles e loga o email)
+				// Envio de e-mail comentado pois o professor enviará o e-mail por conta própria
+				/*
 				const notifyRes = await apiFetch(
 					`/internships/${pageData.internship.id}/notificar-aprovacao`,
 					{
@@ -934,6 +957,8 @@
 							(notifyErr.error || 'Erro desconhecido')
 					);
 				}
+				*/
+				alert('Estágio aprovado com sucesso!');
 				window.location.reload();
 			} else {
 				const err = await response.json();
@@ -1302,7 +1327,7 @@
 							</button>
 						{/if}
 
-						{#if pageConfig.canSubmitForApproval && pageData.user_role === 'company'}
+						{#if enableTceButtons && pageConfig.canSubmitForApproval && pageData.user_role === 'company'}
 							<button
 								type="button"
 								onclick={handleSendForApproval}
@@ -1329,12 +1354,12 @@
 								{#if submitting}
 									<span class="mr-2 animate-spin">🌀</span> Processando...
 								{:else}
-									✅ Aprovar Estágio
+									✅ Atualizar status para aprovado
 								{/if}
 							</button>
 						{/if}
 
-						{#if pageConfig.canReject}
+						{#if enableTceButtons && pageConfig.canReject}
 							<button
 								type="button"
 								onclick={handleReject}

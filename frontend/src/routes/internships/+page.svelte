@@ -4,6 +4,7 @@
 	import { apiFetch, checkAuth } from '$lib/api';
 	import { goto } from '$app/navigation';
 	import { fade, fly } from 'svelte/transition';
+	import Modal from '$lib/components/Modal.svelte';
 
 	interface Internship {
 		id: string;
@@ -27,6 +28,7 @@
 			| 'STARTED'
 			| 'FINISHED'
 			| 'ARCHIVED';
+		hasOccurrences?: boolean;
 	}
 
 	interface Teacher {
@@ -209,6 +211,77 @@
 		} finally {
 			isDeleting = false;
 			isDeletingId = null;
+		}
+	}
+
+	let showOccurrencesModal = $state(false);
+	let selectedInternship = $state<Internship | null>(null);
+	let occurrences = $state<any[]>([]);
+	let isOccurrencesLoading = $state(false);
+	let occurrencesError = $state<string | null>(null);
+
+	async function fetchOccurrences(internshipId: string) {
+		isOccurrencesLoading = true;
+		occurrencesError = null;
+		try {
+			const res = await apiFetch(`/internships/${internshipId}/occurrences`);
+			if (res.ok) {
+				occurrences = await res.json();
+			} else {
+				occurrencesError = 'Erro ao carregar ocorrências.';
+			}
+		} catch {
+			occurrencesError = 'Problema de conexão ao buscar ocorrências.';
+		} finally {
+			isOccurrencesLoading = false;
+		}
+	}
+
+	function openOccurrencesModal(item: Internship) {
+		selectedInternship = item;
+		showOccurrencesModal = true;
+		fetchOccurrences(item.id);
+	}
+
+	async function toggleOccurrenceResolution(occurrenceId: string, currentResolved: boolean) {
+		if (!selectedInternship) return;
+		try {
+			const res = await apiFetch(`/internships/${selectedInternship.id}/occurrences/${occurrenceId}/resolve`, {
+				method: 'PUT',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({ resolved: !currentResolved })
+			});
+
+			if (res.ok) {
+				const data = await res.json();
+				// Atualizar ocorrência na lista local
+				occurrences = occurrences.map(occ => {
+					if (occ.id === occurrenceId) {
+						return {
+							...occ,
+							resolvedAt: data.occurrence.resolvedAt,
+							resolvedByName: data.occurrence.resolvedAt ? ($user?.fullName || 'Você') : null,
+							resolvedByRole: data.occurrence.resolvedAt ? ($user?.roles || 'teacher') : null
+						};
+					}
+					return occ;
+				});
+
+				// Atualizar item na listagem principal
+				internships = internships.map(item => {
+					if (item.id === selectedInternship!.id) {
+						return { ...item, hasOccurrences: data.hasOccurrences };
+					}
+					return item;
+				});
+			} else {
+				const err = await res.json();
+				alert(err.error || 'Erro ao alterar resolução da ocorrência.');
+			}
+		} catch {
+			alert('Erro ao tentar se conectar ao servidor.');
 		}
 	}
 </script>
@@ -401,33 +474,36 @@
 					<table class="w-full border-collapse text-left">
 						<thead>
 							<tr class="border-b border-slate-100 bg-slate-50">
-								<th class="px-6 py-4 text-xs font-black tracking-wider text-slate-500 uppercase"
+								<th class="px-3 py-4 text-xs font-black tracking-wider text-slate-500 uppercase"
 									>Matrícula</th
 								>
-								<th class="px-6 py-4 text-xs font-black tracking-wider text-slate-500 uppercase"
+								<th class="px-3 py-4 text-xs font-black tracking-wider text-slate-500 uppercase"
 									>Nome Aluno</th
 								>
-								<th class="px-6 py-4 text-xs font-black tracking-wider text-slate-500 uppercase"
+								<th class="px-3 py-4 text-xs font-black tracking-wider text-slate-500 uppercase"
 									>Curso</th
 								>
-								<th class="px-6 py-4 text-xs font-black tracking-wider text-slate-500 uppercase"
+								<th class="px-3 py-4 text-xs font-black tracking-wider text-slate-500 uppercase"
 									>Empresa</th
 								>
-								<th class="px-6 py-4 text-xs font-black tracking-wider text-slate-500 uppercase"
+								<th class="px-3 py-4 text-xs font-black tracking-wider text-slate-500 uppercase"
 									>Início</th
 								>
-								<th class="px-6 py-4 text-xs font-black tracking-wider text-slate-500 uppercase"
+								<th class="px-3 py-4 text-xs font-black tracking-wider text-slate-500 uppercase"
 									>Final</th
 								>
-								<th class="px-6 py-4 text-xs font-black tracking-wider text-slate-500 uppercase"
+								<th class="px-3 py-4 text-xs font-black tracking-wider text-slate-500 uppercase"
 									>Criado em</th
 								>
-								<th class="px-6 py-4 text-xs font-black tracking-wider text-slate-500 uppercase"
+								<th class="px-3 py-4 text-xs font-black tracking-wider text-slate-500 uppercase"
+									>Modificado em</th
+								>
+								<th class="px-3 py-4 text-xs font-black tracking-wider text-slate-500 uppercase"
 									>Status</th
 								>
 
 								<th
-									class="px-6 py-4 text-center text-xs font-black tracking-wider text-slate-500 uppercase"
+									class="px-3 py-4 text-center text-xs font-black tracking-wider text-slate-500 uppercase"
 									>Ações</th
 								>
 							</tr>
@@ -438,12 +514,27 @@
 									in:fly={{ x: -10, duration: 300, delay: i * 20 }}
 									class="group transition-colors hover:bg-indigo-50/30"
 								>
-									<td class="px-6 py-4 font-mono text-sm text-slate-600"
+									<td class="px-3 py-4 font-mono text-sm text-slate-600"
 										>{item.studentRegistration || '-'}</td
 									>
-									<td class="px-6 py-4">
+									<td class="px-3 py-4">
 										<div class="flex items-center gap-2">
 											<div class="text-sm font-bold text-slate-800">{item.studentName}</div>
+											{#if item.hasOccurrences && $user && ['teacher', 'admin', 'sudo'].includes($user.roles)}
+												<button
+													type="button"
+													onclick={(e) => {
+														e.stopPropagation();
+														openOccurrencesModal(item);
+													}}
+													class="inline-flex items-center justify-center rounded-full bg-amber-50 hover:bg-amber-100 p-1 text-amber-500 hover:text-amber-600 transition-colors shadow-sm cursor-pointer"
+													title="Ver Pendências/Ocorrências do Estágio"
+												>
+													<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+														<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+													</svg>
+												</button>
+											{/if}
 											{#if $user && $user.roles === 'company' && item.userId !== $user.id}
 												<span
 													class="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-black tracking-wider text-indigo-500 uppercase"
@@ -453,21 +544,21 @@
 											{/if}
 										</div>
 									</td>
-									<td class="px-6 py-4">
+									<td class="px-3 py-4">
 										<span
 											class="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-black text-indigo-700 transition-colors group-hover:bg-indigo-200"
 										>
 											{item.courseSigla}
 										</span>
 									</td>
-									<td class="px-6 py-4 text-sm font-medium text-slate-700">{item.companyName}</td>
-									<td class="px-6 py-4 text-sm whitespace-nowrap text-slate-500"
+									<td class="px-3 py-4 text-sm font-medium text-slate-700">{item.companyName}</td>
+									<td class="px-3 py-4 text-sm whitespace-nowrap text-slate-500"
 										>{formatDate(item.startDate)}</td
 									>
-									<td class="px-6 py-4 text-sm whitespace-nowrap text-slate-500"
+									<td class="px-3 py-4 text-sm whitespace-nowrap text-slate-500"
 										>{formatDate(item.endDate)}</td
 									>
-									<td class="px-6 py-4 text-sm whitespace-nowrap text-slate-400"
+									<td class="px-3 py-4 text-sm whitespace-nowrap text-slate-400"
 										>{new Date(item.createdAt).toLocaleString('pt-BR', {
 											day: '2-digit',
 											month: '2-digit',
@@ -476,8 +567,17 @@
 											minute: '2-digit'
 										})}</td
 									>
-
-									<td class="px-6 py-4">
+									<td class="px-3 py-4 text-sm whitespace-nowrap text-slate-400"
+										>{new Date(item.updatedAt).toLocaleString('pt-BR', {
+											day: '2-digit',
+											month: '2-digit',
+											year: 'numeric',
+											hour: '2-digit',
+											minute: '2-digit'
+										})}</td
+									>
+ 
+									<td class="px-3 py-4">
 										{#if item.status === 'DRAFT'}
 											<span
 												class="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-2.5 py-0.5 text-[10px] font-black tracking-tight text-slate-600 uppercase"
@@ -534,8 +634,8 @@
 											</span>
 										{/if}
 									</td>
-
-									<td class="px-6 py-4 text-center">
+ 
+									<td class="px-3 py-4 text-center">
 										<div class="flex items-center justify-center gap-2">
 											<a
 												href="/gotce/v2?id={item.id}"
@@ -553,7 +653,7 @@
 													/>
 												</svg>
 											</a>
-
+ 
 											<button
 												class="rounded-lg p-2 text-red-500 transition-colors hover:bg-red-50 disabled:opacity-30"
 												title="Excluir"
@@ -590,7 +690,7 @@
 
 							{#if internships.length === 0}
 								<tr>
-									<td colspan="9" class="px-6 py-20 text-center">
+									<td colspan="9" class="px-3 py-20 text-center">
 										<div class="flex flex-col items-center space-y-2">
 											<svg
 												class="h-12 w-12 text-slate-200"
@@ -670,6 +770,91 @@
 		</main>
 	</div>
 </div>
+
+<Modal bind:show={showOccurrencesModal} onCancel={() => showOccurrencesModal = false}>
+	{#snippet children()}
+		<div class="p-6">
+			<!-- Header -->
+			<div class="mb-4 border-b border-slate-100 pb-3">
+				<h3 class="text-lg font-black text-slate-800 tracking-tight">
+					Ocorrências de Atenção
+				</h3>
+				{#if selectedInternship}
+					<p class="text-xs font-bold text-indigo-600 mt-0.5 uppercase">
+						{selectedInternship.studentName}
+					</p>
+				{/if}
+			</div>
+
+			<!-- Loader / Errors -->
+			{#if isOccurrencesLoading}
+				<div class="flex flex-col items-center justify-center py-8 space-y-2">
+					<div class="h-8 w-8 animate-spin rounded-full border-3 border-indigo-600 border-t-transparent"></div>
+					<p class="text-xs font-bold text-slate-500 animate-pulse">Carregando ocorrências...</p>
+				</div>
+			{:else if occurrencesError}
+				<div class="p-4 bg-rose-50 rounded-2xl text-center text-sm font-semibold text-rose-600">
+					{occurrencesError}
+				</div>
+			{:else if occurrences.length === 0}
+				<div class="text-center py-8">
+					<span class="text-4xl">🎉</span>
+					<p class="text-sm font-bold text-slate-500 mt-2">Nenhuma ocorrência encontrada.</p>
+				</div>
+			{:else}
+				<!-- Occurrence List -->
+				<div class="space-y-4 max-h-[300px] overflow-y-auto pr-1">
+					{#each occurrences as occ}
+						<div class="rounded-2xl border border-slate-100 p-4 transition-all duration-200 {occ.resolvedAt ? 'bg-slate-50 border-slate-200' : 'bg-amber-50/40 border-amber-100'}">
+							<div class="flex items-start justify-between gap-3">
+								<div class="flex-1 space-y-1">
+									<p class="text-sm font-bold text-slate-800 leading-snug">
+										{occ.description}
+									</p>
+									<div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400">
+										<span>Detectado em: {new Date(occ.createdAt).toLocaleDateString('pt-BR')}</span>
+										{#if occ.resolvedAt}
+											<span class="inline-flex items-center gap-1 rounded bg-emerald-50 px-1.5 py-0.5 font-black text-emerald-600 uppercase text-[9px]">
+												<svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+													<path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+												</svg>
+												Resolvido
+											</span>
+										{/if}
+									</div>
+
+									{#if occ.resolvedAt}
+										<p class="text-xs font-semibold text-emerald-600 bg-emerald-50/50 p-2 rounded-xl mt-2 border border-emerald-100/50">
+											Resolvido em {new Date(occ.resolvedAt).toLocaleString('pt-BR')}
+											{#if occ.resolvedByName}
+												por {occ.resolvedByName} ({occ.resolvedByRole === 'teacher' ? 'Professor' : occ.resolvedByRole})
+											{:else}
+												automaticamente pelo sistema
+											{/if}
+										</p>
+									{/if}
+								</div>
+
+
+							</div>
+						</div>
+					{/each}
+				</div>
+			{/if}
+
+			<!-- Footer -->
+			<div class="mt-6 flex justify-end">
+				<button
+					type="button"
+					onclick={() => showOccurrencesModal = false}
+					class="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-xs font-black text-slate-500 hover:bg-slate-50 transition active:scale-95"
+				>
+					Fechar Janela
+				</button>
+			</div>
+		</div>
+	{/snippet}
+</Modal>
 
 <style>
 	/* Estilos Premium */

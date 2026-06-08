@@ -124,6 +124,15 @@
 												📝 Estagiários
 											</a>
 										{/if}
+										{#if $user?.roles && ['admin', 'sudo'].includes($user.roles)}
+											<a
+												href="/estagio/pendentes"
+												class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-blue-600"
+												on:click={() => (showDropdown = false)}
+											>
+												📋 Pendentes com Estágio
+											</a>
+										{/if}
 
 										{#if $user.roles === 'admin' || $user.roles === 'sudo'}
 											<div class="my-1 border-t border-gray-50">

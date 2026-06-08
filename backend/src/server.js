@@ -32,6 +32,7 @@ const keepAliveRoutes = require('./routes/keepAliveRoutes');
 const configRoutes = require('./routes/configRoutes');
 const webhookRoutes = require('./routes/webhookRoutes');
 const emailRoutes = require('./routes/emailRoutes');
+const alunoRoutes = require('./routes/alunoRoutes');
 // Rotas
 app.use('/api/auth', authRoutes);
 app.use('/api/webhooks', webhookRoutes);
@@ -45,6 +46,7 @@ app.use('/api/teachers', teacherRoutes);
 app.use('/api/usuarios', userRoutes);
 app.use('/api/forms', formRoutes);
 app.use('/api/internships', internshipRoutes);
+app.use('/api/alunos', alunoRoutes);
 app.use('/api/system', keepAliveRoutes);
 
 // Rota de Teste
@@ -60,9 +62,20 @@ app.use((req, res) => {
 // Tratamento de Erros
 app.use(errorHandler);
 
+const { checkAllOccurrences } = require('./services/occurrenceService');
+
 // Inicialização
 app.listen(config.port, () => {
     console.log(`Servidor rodando em: http://localhost:${config.port}`);
     console.log('='.repeat(50));
 
+    // Executar verificação de ocorrências no startup (atrasado por 5s)
+    setTimeout(() => {
+        checkAllOccurrences("Inicialização do servidor").catch(err => console.error('[STARTUP CRON] Erro ao verificar ocorrências:', err));
+    }, 5000);
+
+    // Agendar verificação para rodar a cada 24 horas
+    setInterval(() => {
+        checkAllOccurrences("Verificação diária").catch(err => console.error('[DAILY CRON] Erro ao verificar ocorrências:', err));
+    }, 24 * 60 * 60 * 1000);
 });

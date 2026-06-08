@@ -16,6 +16,10 @@ router.post('/:id/notificar-professor', internshipController.notifyTeacherConfer
 router.post('/:id/notificar-aprovacao', internshipController.notifyCompanyApproval);
 router.post('/:id/notificar-reprovacao', internshipController.notifyCompanyRejection);
 
+// Rotas de Ocorrências
+router.get('/:id/occurrences', internshipController.getInternshipOccurrences);
+router.put('/:id/occurrences/:occurrenceId/resolve', authorizeRoles('teacher', 'admin', 'sudo'), internshipController.resolveInternshipOccurrence);
+
 
 
 module.exports = router;

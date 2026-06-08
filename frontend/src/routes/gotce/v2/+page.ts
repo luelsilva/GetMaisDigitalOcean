@@ -41,14 +41,16 @@ export const load: PageLoad = async ({ fetch, url }) => {
 
         const formData = await formRes.json();
 
-        // Chamadas paralelas para dados auxiliares
-        const [coursesRes, teachersRes] = await Promise.all([
+        // Chamadas paralelas para dados auxiliares e configurações
+        const [coursesRes, teachersRes, configRes] = await Promise.all([
             apiFetch('/courses', {}, fetch),
-            apiFetch('/teachers', {}, fetch)
+            apiFetch('/teachers', {}, fetch),
+            apiFetch('/config/features', {}, fetch).catch(() => null)
         ]);
 
         const coursesList = coursesRes.ok ? await coursesRes.json() : [];
         const teachersList = teachersRes.ok ? await teachersRes.json() : [];
+        const features = configRes && configRes.ok ? await configRes.json() : { enable_tce_buttons: false };
 
         // Carregar dados do estágio se estiver em modo de edição
         let internshipData = null;
@@ -81,7 +83,8 @@ export const load: PageLoad = async ({ fetch, url }) => {
             internship: internshipData,
             mode: mode,
             internship_status: internshipData?.status || 'DRAFT',
-            user_role: meData?.roles || 'generic'
+            user_role: meData?.roles || 'generic',
+            features: features
         };
     } catch (err: any) {
         if (err.status) throw err;

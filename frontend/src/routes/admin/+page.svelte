@@ -7,7 +7,7 @@
         { title: 'Modelos de Formulário', description: 'Editar configurações de TCEs', link: '/admin/form-models', icon: '📝', color: '#f59e0b' },
         { title: 'Cursos', description: 'Gerenciar cursos técnicos', link: '/admin/courses', icon: '🎓', color: '#8b5cf6' },
         { title: 'Professores', description: 'Cadastro de orientadores', link: '/admin/teachers', icon: '👨‍🏫', color: '#ec4899' },
-        { title: 'Importar Alunos', description: 'Upload da planilha SISGESC para cadastro em massa', link: '/admin/importar-alunos', icon: '📥', color: '#0891b2' },
+        { title: 'Importar Alunos', description: 'Upload da planilha SISGESC para cadastro em massa', link: 'https://importalunos.getmais.com.br', icon: '📥', color: '#0891b2', external: true },
         { title: 'Logs de E-mail', description: 'Histórico de envios e status', link: '/admin/emails', icon: '📧', color: '#0ea5e9' },
         { title: 'Configurações', description: 'Feature Flags e ajustes do sistema', link: '/admin/settings', icon: '⚙️', color: '#64748b' },
     ];
@@ -25,7 +25,12 @@
 
     <div class="modules-grid">
         {#each adminModules as module}
-            <a href={module.link} class="module-card">
+            <a 
+                href={module.link} 
+                class="module-card"
+                target={module.external ? "_blank" : undefined}
+                rel={module.external ? "noopener noreferrer" : undefined}
+            >
                 <div class="icon-wrapper" style="background-color: {module.color}15; color: {module.color}">
                     <span class="icon">{module.icon}</span>
                 </div>

@@ -1,5 +1,5 @@
 const { db } = require('../db');
-const { internships, internshipsHistory, profiles, emailLogs } = require('../db/schema');
+const { internships, internshipsHistory, profiles, emailLogs, internshipOccurrences } = require('../db/schema');
 const { eq, desc, asc, or, ilike, sql, and, isNull, inArray } = require('drizzle-orm');
 const emailService = require('../services/emailService');
 const config = require('../config');
@@ -24,6 +24,10 @@ exports.getAllInternships = async (req, res, next) => {
             updatedAt: internships.updatedAt,
             lastModifiedBy: internships.lastModifiedBy,
             status: internships.status,
+            hasOccurrences: sql`EXISTS (
+                SELECT 1 FROM ${internshipOccurrences} io
+                WHERE io.internship_id = "internships"."id" AND io.resolved_at IS NULL
+            )`.mapWith(Boolean),
         };
 
         let query = db.select(queryFields).from(internships);
@@ -168,7 +172,7 @@ exports.getInternshipHistory = async (req, res, next) => {
 
             if (!internship) return res.status(404).json({ error: 'Estágio não encontrado' });
 
-            if (internship.userId !== req.user.id && internship.companyId !== req.user.id) {
+            if (internship.userId !== req.user.id && internship.companyId && internship.companyId !== req.user.id) {
                 return res.status(403).json({ error: 'Acesso negado ao histórico deste estágio.' });
             }
         }
@@ -690,6 +694,82 @@ exports.notifyCompanyRejection = async (req, res, next) => {
         res.status(500).json({ error: 'Falha ao enviar e-mail de reprovação' });
     }
 };
+
+// Obter ocorrências de um estágio
+exports.getInternshipOccurrences = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+
+        const occurrences = await db.select({
+            id: internshipOccurrences.id,
+            internshipId: internshipOccurrences.internshipId,
+            ruleKey: internshipOccurrences.ruleKey,
+            description: internshipOccurrences.description,
+            createdAt: internshipOccurrences.createdAt,
+            resolvedAt: internshipOccurrences.resolvedAt,
+            resolvedBy: internshipOccurrences.resolvedBy,
+            resolvedByName: profiles.fullName,
+            resolvedByEmail: profiles.email,
+            resolvedByRole: profiles.roles
+        })
+        .from(internshipOccurrences)
+        .leftJoin(profiles, eq(internshipOccurrences.resolvedBy, profiles.id))
+        .where(eq(internshipOccurrences.internshipId, id))
+        .orderBy(desc(internshipOccurrences.createdAt));
+
+        res.json(occurrences);
+    } catch (error) {
+        next(error);
+    }
+};
+
+// Resolver ou reabrir ocorrência
+exports.resolveInternshipOccurrence = async (req, res, next) => {
+    try {
+        const { id, occurrenceId } = req.params;
+        const { resolved } = req.body; // true ou false
+
+        const updateSet = {
+            resolvedAt: resolved ? new Date() : null,
+            resolvedBy: resolved ? req.user.id : null
+        };
+
+        const [updated] = await db.update(internshipOccurrences)
+            .set(updateSet)
+            .where(
+                and(
+                    eq(internshipOccurrences.id, occurrenceId),
+                    eq(internshipOccurrences.internshipId, id)
+                )
+            )
+            .returning();
+
+        if (!updated) {
+            return res.status(404).json({ error: 'Ocorrência não encontrada para este estágio' });
+        }
+
+        // Recalcular status de pendências do estágio
+        const pending = await db.select()
+            .from(internshipOccurrences)
+            .where(
+                and(
+                    eq(internshipOccurrences.internshipId, id),
+                    isNull(internshipOccurrences.resolvedAt)
+                )
+            );
+
+        const hasOccurrencesNow = pending.length > 0;
+
+        res.json({
+            message: resolved ? 'Ocorrência resolvida com sucesso' : 'Ocorrência reaberta com sucesso',
+            occurrence: updated,
+            hasOccurrences: hasOccurrencesNow
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 
 
 
