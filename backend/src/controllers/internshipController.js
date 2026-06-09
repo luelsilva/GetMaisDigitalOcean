@@ -799,6 +799,18 @@ exports.copyInternship = async (req, res, next) => {
             ? original.studentName
             : `Cópia de ${original.studentName}`;
 
+        // Copiar jsonData e prefixar os campos de nome do aluno dentro do JSON
+        // para que o professor veja o prefixo ao abrir o formulário e seja obrigado a editar
+        const copiedJsonData = original.jsonData ? { ...original.jsonData } : null;
+        if (copiedJsonData) {
+            if (copiedJsonData.nome_aluno !== undefined && !String(copiedJsonData.nome_aluno).startsWith('Cópia de ')) {
+                copiedJsonData.nome_aluno = `Cópia de ${copiedJsonData.nome_aluno}`;
+            }
+            if (copiedJsonData.NomeAluno !== undefined && !String(copiedJsonData.NomeAluno).startsWith('Cópia de ')) {
+                copiedJsonData.NomeAluno = `Cópia de ${copiedJsonData.NomeAluno}`;
+            }
+        }
+
         // Criar cópia com status DRAFT_BY_TEACHER e nome prefixado
         const [inserted] = await db.insert(internships).values({
             userId: req.user.id,
@@ -809,7 +821,7 @@ exports.copyInternship = async (req, res, next) => {
             companyName: original.companyName,
             startDate: original.startDate,
             endDate: original.endDate,
-            jsonData: original.jsonData,
+            jsonData: copiedJsonData,
             status: 'DRAFT_BY_TEACHER',
             lastModifiedBy: req.user.id
         }).returning({ id: internships.id });
