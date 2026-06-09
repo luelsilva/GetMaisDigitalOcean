@@ -20,6 +20,7 @@ router.post('/:id/notificar-reprovacao', internshipController.notifyCompanyRejec
 router.get('/:id/occurrences', internshipController.getInternshipOccurrences);
 router.put('/:id/occurrences/:occurrenceId/resolve', authorizeRoles('teacher', 'admin', 'sudo'), internshipController.resolveInternshipOccurrence);
 
-
+// Cópia de TCE (apenas teacher, admin, sudo)
+router.post('/:id/copy', authorizeRoles('teacher', 'admin', 'sudo'), internshipController.copyInternship);
 
 module.exports = router;

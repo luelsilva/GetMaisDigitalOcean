@@ -45,6 +45,8 @@
 	let totalRecords = $state(0);
 	let isDeleting = $state(false);
 	let isDeletingId = $state<string | null>(null);
+	let isCopying = $state(false);
+	let isCopyingId = $state<string | null>(null);
 	let teachers = $state<Teacher[]>([]);
 	let selectedTeacher = $state($page.url.searchParams.get('teacher') || '');
 	let selectedStatuses = $state<string[]>($page.url.searchParams.get('status')?.split(',').filter(Boolean) || []);
@@ -260,6 +262,30 @@
 		} finally {
 			isDeleting = false;
 			isDeletingId = null;
+		}
+	}
+
+	async function handleCopy(id: string) {
+		if (!confirm('Deseja criar uma cópia deste TCE? O nome do aluno será prefixado com "Cópia de ".')) return;
+
+		isCopying = true;
+		isCopyingId = id;
+		try {
+			const response = await apiFetch(`/internships/${id}/copy`, { method: 'POST' });
+			if (response.ok) {
+				const newItem = await response.json();
+				internships = [newItem, ...internships];
+				totalRecords++;
+				alert(`Cópia criada com sucesso! Nome: ${newItem.studentName}`);
+			} else {
+				const err = await response.json();
+				alert(err.error || 'Erro ao criar cópia do estágio.');
+			}
+		} catch {
+			alert('Erro de conexão ao tentar criar a cópia.');
+		} finally {
+			isCopying = false;
+			isCopyingId = null;
 		}
 	}
 
@@ -702,7 +728,34 @@
 													/>
 												</svg>
 											</a>
- 
+
+											{#if $user && ['teacher', 'admin', 'sudo'].includes($user.roles || '')}
+												<button
+													class="rounded-lg p-2 text-indigo-400 transition-colors hover:bg-indigo-50 hover:text-indigo-600 disabled:opacity-30"
+													title="Criar Cópia do TCE"
+													disabled={isCopying && isCopyingId === item.id}
+													onclick={(e) => {
+														e.stopPropagation();
+														handleCopy(item.id);
+													}}
+												>
+													{#if isCopying && isCopyingId === item.id}
+														<div
+															class="h-5 w-5 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent"
+														></div>
+													{:else}
+														<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+															<path
+																stroke-linecap="round"
+																stroke-linejoin="round"
+																stroke-width="2"
+																d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+															/>
+														</svg>
+													{/if}
+												</button>
+											{/if}
+
 											<button
 												class="rounded-lg p-2 text-red-500 transition-colors hover:bg-red-50 disabled:opacity-30"
 												title="Excluir"

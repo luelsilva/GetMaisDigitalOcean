@@ -780,7 +780,43 @@ exports.resolveInternshipOccurrence = async (req, res, next) => {
         next(error);
     }
 };
+// Criar cópia de um estágio (apenas teacher, admin, sudo)
+exports.copyInternship = async (req, res, next) => {
+    try {
+        const { id } = req.params;
 
+        // Buscar estágio original (não deletado)
+        const [original] = await db.select()
+            .from(internships)
+            .where(and(eq(internships.id, id), isNull(internships.deletedAt)));
 
+        if (!original) {
+            return res.status(404).json({ error: 'Estágio não encontrado' });
+        }
 
+        // Prefixar o nome do aluno com "Cópia de "
+        const copiedName = original.studentName.startsWith('Cópia de ')
+            ? original.studentName
+            : `Cópia de ${original.studentName}`;
 
+        // Criar cópia com status DRAFT_BY_TEACHER e nome prefixado
+        const [inserted] = await db.insert(internships).values({
+            userId: req.user.id,
+            companyId: null,
+            studentRegistration: original.studentRegistration,
+            studentName: copiedName,
+            courseSigla: original.courseSigla,
+            companyName: original.companyName,
+            startDate: original.startDate,
+            endDate: original.endDate,
+            jsonData: original.jsonData,
+            status: 'DRAFT_BY_TEACHER',
+            lastModifiedBy: req.user.id
+        }).returning({ id: internships.id });
+
+        const newInternship = await getFullInternship(inserted.id);
+        res.status(201).json(newInternship);
+    } catch (error) {
+        next(error);
+    }
+};

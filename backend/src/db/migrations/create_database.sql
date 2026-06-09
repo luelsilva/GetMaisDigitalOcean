@@ -318,6 +318,8 @@ CREATE TABLE IF NOT EXISTS "internships" (
     "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     "user_id" UUID REFERENCES profiles(id) ON DELETE SET NULL,
     "student_registration" bigint,
+    -- Ao criar uma cópia de um TCE (POST /internships/:id/copy), o backend prefixará
+    -- automaticamente este campo com o texto "Cópia de " (ex.: "Cópia de João Silva").
     "student_name" text NOT NULL,
     "course_sigla" text NOT NULL,
     "company_id" UUID REFERENCES profiles(id) ON DELETE SET NULL,

@@ -1073,6 +1073,45 @@
 	function handleCloseModal() {
 		showSaveResultModal = false;
 	}
+
+	// --- ALTERAÇÃO FORÇADA DE STATUS (teacher/admin/sudo) ---
+	const STATUS_OPTIONS = [
+		{ value: 'DRAFT',              label: 'Editando (Rascunho)' },
+		{ value: 'DRAFT_BY_TEACHER',   label: 'Rascunho do Professor' },
+		{ value: 'WAITING_APPROVAL',   label: 'Aguardando Aprovação' },
+		{ value: 'REVISION_REQUESTED', label: 'Revisão Solicitada' },
+		{ value: 'APPROVED',           label: 'Aprovado' },
+		{ value: 'STARTED',            label: 'Estagiando' },
+		{ value: 'FINISHED',           label: 'Finalizado' },
+		{ value: 'ARCHIVED',           label: 'Arquivado' },
+	];
+
+	let showForceStatusModal = $state(false);
+	let forceStatusSelected = $state(pageData.internship_status || 'DRAFT');
+	let forceStatusSubmitting = $state(false);
+
+	async function executeForceStatus() {
+		if (!forceStatusSelected) return;
+		forceStatusSubmitting = true;
+		try {
+			// Usa o endpoint padrão de update, mas o backend permite qualquer transição para roles teacher/admin/sudo
+			const response = await apiFetch(`/internships/${pageData.internship.id}`, {
+				method: 'PUT',
+				body: JSON.stringify({ status: forceStatusSelected })
+			});
+			if (response.ok) {
+				showForceStatusModal = false;
+				window.location.reload();
+			} else {
+				const err = await response.json();
+				alert('Erro ao alterar status: ' + (err.error || 'Erro desconhecido'));
+			}
+		} catch (e) {
+			alert('Erro de conexão ao alterar status.');
+		} finally {
+			forceStatusSubmitting = false;
+		}
+	}
 </script>
 
 <!-- Modal Unificado de Resultado do Salvamento (V2 - NEW/DRAFT) -->
@@ -1446,6 +1485,21 @@
 				<div class="mx-auto mt-8 w-full max-w-4xl">
 					<InternshipHistory internshipId={pageData.internship.id} />
 				</div>
+
+				{#if ['teacher', 'admin', 'sudo'].includes(pageData.user_role)}
+					<div class="mx-auto mt-4 w-full max-w-4xl text-center">
+						<button
+							type="button"
+							onclick={() => {
+								forceStatusSelected = pageData.internship_status;
+								showForceStatusModal = true;
+							}}
+							class="text-xs font-medium text-slate-400 underline underline-offset-2 transition-colors hover:text-slate-600"
+						>
+							alterar incondicionalmente o status do TCE
+						</button>
+					</div>
+				{/if}
 			{/if}
 		</div>
 	</div>
@@ -1499,6 +1553,79 @@
 		>
 			Confirmar Devolução
 		</button>
+	</div>
+</Modal>
+
+<!-- Modal de Alteração Incondicional de Status (teacher/admin/sudo) -->
+<Modal bind:show={showForceStatusModal} onCancel={() => (showForceStatusModal = false)}>
+	<div class="p-6" style="min-width: 340px; max-width: 460px;">
+		<!-- Header -->
+		<div class="mb-5 flex flex-col items-center text-center">
+			<div class="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-orange-100">
+				<svg class="h-7 w-7 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+						d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+				</svg>
+			</div>
+			<h3 class="text-lg font-black tracking-tight text-slate-800">Alteração Incondicional de Status</h3>
+			<p class="mt-2 text-xs text-slate-500 leading-relaxed max-w-xs">
+				Este recurso permite mover o TCE para <strong>qualquer status</strong>, ignorando as regras
+				normais de fluxo. Use com extrema cautela — a ação é imediata e será registrada no histórico.
+			</p>
+		</div>
+
+		<!-- Status Selector -->
+		<div class="mb-5 space-y-2">
+			<p class="text-xs font-black tracking-wider text-slate-500 uppercase">Selecione o novo status:</p>
+			<div class="space-y-1.5 rounded-xl border border-slate-200 bg-slate-50 p-3">
+				{#each STATUS_OPTIONS as opt}
+					<label
+						class="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 transition-colors
+							{forceStatusSelected === opt.value
+								? 'bg-orange-100 ring-1 ring-orange-300'
+								: 'hover:bg-white'}
+							{pageData.internship_status === opt.value ? 'opacity-60' : ''}"
+					>
+						<input
+							type="radio"
+							name="force_status"
+							value={opt.value}
+							bind:group={forceStatusSelected}
+							class="accent-orange-500"
+						/>
+						<span class="flex-1 text-sm font-semibold text-slate-700">{opt.label}</span>
+						{#if pageData.internship_status === opt.value}
+							<span class="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-black text-slate-500 uppercase">Atual</span>
+						{/if}
+						<span class="font-mono text-[10px] text-slate-400">{opt.value}</span>
+					</label>
+				{/each}
+			</div>
+		</div>
+
+		<!-- Buttons -->
+		<div class="flex gap-3">
+			<button
+				type="button"
+				onclick={() => (showForceStatusModal = false)}
+				class="flex-1 rounded-xl border border-slate-200 bg-white py-2.5 text-sm font-bold text-slate-500 transition hover:bg-slate-50 active:scale-95"
+			>
+				Cancelar
+			</button>
+			<button
+				type="button"
+				onclick={executeForceStatus}
+				disabled={forceStatusSubmitting || forceStatusSelected === pageData.internship_status}
+				class="flex-[1.5] rounded-xl bg-orange-500 py-2.5 text-sm font-black text-white shadow transition
+					hover:bg-orange-600 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+			>
+				{#if forceStatusSubmitting}
+					<span class="animate-spin">🌀</span> Alterando...
+				{:else}
+					⚡ Alterar Status
+				{/if}
+			</button>
+		</div>
 	</div>
 </Modal>
 
