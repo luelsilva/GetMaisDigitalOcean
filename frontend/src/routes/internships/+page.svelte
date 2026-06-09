@@ -189,15 +189,15 @@
 
 	function updateURL() {
 		const query = new URLSearchParams();
-		if (currentPage > 1) query.set('page', String(currentPage));
-		if (pageSize !== 25) query.set('limit', String(pageSize));
+		query.set('page', String(currentPage));
+		query.set('limit', String(pageSize));
 		if (searchTerm) query.set('search', searchTerm);
 		if (searchName) query.set('studentName', searchName);
 		if (selectedTeacher) query.set('teacher', selectedTeacher);
 		if (selectedStatuses.length > 0) query.set('status', selectedStatuses.join(','));
 
 		const queryString = query.toString();
-		const newURL = queryString ? `?${queryString}` : '?';
+		const newURL = `?${queryString}`;
 
 		goto(newURL, { keepFocus: true, replaceState: true });
 	}
