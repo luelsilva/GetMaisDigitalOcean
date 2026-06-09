@@ -3,6 +3,7 @@ const { internships, internshipsHistory, profiles, emailLogs, internshipOccurren
 const { eq, desc, asc, or, ilike, sql, and, isNull, inArray } = require('drizzle-orm');
 const emailService = require('../services/emailService');
 const config = require('../config');
+const { checkSingleInternshipOccurrences } = require('../services/occurrenceService');
 
 // Listar todos os estágios com suporte a busca e paginação
 exports.getAllInternships = async (req, res, next) => {
@@ -465,6 +466,11 @@ exports.updateInternship = async (req, res, next) => {
 
         }
 
+        // Disparar a verificação de ocorrências para este estágio em segundo plano
+        checkSingleInternshipOccurrences(id, req.user.id).catch(err => {
+            console.error('[SINGLE OCCURRENCE CHECK TRIGGER ERR]', err);
+        });
+
         res.json(updatedInternship);
     } catch (error) {
         next(error);
@@ -573,6 +579,11 @@ exports.notifyTeacherConference = async (req, res, next) => {
                 });
             }
         }
+
+        // Disparar a verificação de ocorrências para este estágio em segundo plano
+        checkSingleInternshipOccurrences(id, req.user.id).catch(err => {
+            console.error('[SINGLE OCCURRENCE CHECK TRIGGER ERR]', err);
+        });
 
         res.json({ 
             message: 'E-mail enviado com sucesso ao professor e status atualizado para Aguardando Aprovação',
