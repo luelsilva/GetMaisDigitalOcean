@@ -1,8 +1,9 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import { user } from '$lib/stores/auth';
 	import { apiFetch, checkAuth } from '$lib/api';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 	import { fade, fly } from 'svelte/transition';
 	import Modal from '$lib/components/Modal.svelte';
 
@@ -45,8 +46,8 @@
 	let isDeleting = $state(false);
 	let isDeletingId = $state<string | null>(null);
 	let teachers = $state<Teacher[]>([]);
-	let selectedTeacher = $state('');
-	let selectedStatuses = $state<string[]>([]);
+	let selectedTeacher = $state($page.url.searchParams.get('teacher') || '');
+	let selectedStatuses = $state<string[]>($page.url.searchParams.get('status')?.split(',').filter(Boolean) || []);
 
 	const statusLabels: Record<string, string> = {
 		DRAFT: 'Editando',
@@ -74,10 +75,10 @@
 	}
 
 	// Filtros e Paginação (Server-side)
-	let searchTerm = $state('');
-	let searchName = $state('');
-	let pageSize = $state(25);
-	let currentPage = $state(1);
+	let searchTerm = $state($page.url.searchParams.get('search') || '');
+	let searchName = $state($page.url.searchParams.get('studentName') || '');
+	let pageSize = $state(Number($page.url.searchParams.get('limit')) || 25);
+	let currentPage = $state(Number($page.url.searchParams.get('page')) || 1);
 
 	async function fetchInternships() {
 		if (isLoading && internships.length > 0) return;
@@ -153,6 +154,54 @@
 		}
 	}
 
+	$effect(() => {
+		const url = $page.url;
+		const currentUser = $user;
+
+		untrack(() => {
+			searchTerm = url.searchParams.get('search') || '';
+			searchName = url.searchParams.get('studentName') || '';
+			selectedTeacher = url.searchParams.get('teacher') || '';
+			
+			const statusParam = url.searchParams.get('status');
+			selectedStatuses = statusParam ? statusParam.split(',').filter(Boolean) : [];
+			
+			pageSize = Number(url.searchParams.get('limit')) || 25;
+			currentPage = Number(url.searchParams.get('page')) || 1;
+
+			const hasFilters = url.searchParams.has('search') ||
+				url.searchParams.has('studentName') ||
+				url.searchParams.has('teacher') ||
+				url.searchParams.has('status') ||
+				url.searchParams.has('page') ||
+				url.searchParams.has('limit');
+
+			if (hasFilters) {
+				if (currentUser) {
+					fetchInternships();
+				}
+			} else {
+				internships = [];
+				totalRecords = 0;
+			}
+		});
+	});
+
+	function updateURL() {
+		const query = new URLSearchParams();
+		if (currentPage > 1) query.set('page', String(currentPage));
+		if (pageSize !== 25) query.set('limit', String(pageSize));
+		if (searchTerm) query.set('search', searchTerm);
+		if (searchName) query.set('studentName', searchName);
+		if (selectedTeacher) query.set('teacher', selectedTeacher);
+		if (selectedStatuses.length > 0) query.set('status', selectedStatuses.join(','));
+
+		const queryString = query.toString();
+		const newURL = queryString ? `?${queryString}` : '?';
+
+		goto(newURL, { keepFocus: true, replaceState: true });
+	}
+
 	function handleSearch(event: KeyboardEvent) {
 		if (event.key === 'Enter') {
 			triggerSearch();
@@ -161,12 +210,12 @@
 
 	function triggerSearch() {
 		currentPage = 1;
-		fetchInternships();
+		updateURL();
 	}
 
 	function handlePageSizeChange() {
 		currentPage = 1;
-		fetchInternships();
+		updateURL();
 	}
 
 	function formatDate(dateStr: string) {
@@ -179,7 +228,7 @@
 	function changePage(page: number) {
 		if (page >= 1 && page <= totalPages) {
 			currentPage = page;
-			fetchInternships(); // Chamada explícita ao mudar de página
+			updateURL();
 		}
 	}
 
@@ -201,7 +250,7 @@
 				// Se a página ficou vazia e não é a primeira, volta uma
 				if (internships.length === 0 && currentPage > 1) {
 					currentPage--;
-					fetchInternships();
+					updateURL();
 				}
 			} else {
 				alert('Erro ao excluir o estágio.');
@@ -520,7 +569,7 @@
 									<td class="px-3 py-4">
 										<div class="flex items-center gap-2">
 											<div class="text-sm font-bold text-slate-800">{item.studentName}</div>
-											{#if item.hasOccurrences && $user && ['teacher', 'admin', 'sudo'].includes($user.roles)}
+											{#if item.hasOccurrences && $user && ['teacher', 'admin', 'sudo'].includes($user.roles || '')}
 												<button
 													type="button"
 													onclick={(e) => {
