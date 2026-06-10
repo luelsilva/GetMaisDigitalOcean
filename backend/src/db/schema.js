@@ -76,6 +76,7 @@ const courses = pgTable('courses', {
     name: text('name').notNull().unique(),
     sigla: varchar('sigla', { length: 10 }).notNull().unique(),
     shortName: varchar('short_name', { length: 40 }).notNull(),
+    linkPlanilha300: text('link_planilha_300'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 });

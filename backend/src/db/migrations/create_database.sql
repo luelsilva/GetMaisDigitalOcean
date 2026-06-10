@@ -202,6 +202,7 @@ CREATE TABLE IF NOT EXISTS "courses" (
     "name" text NOT NULL,
     "sigla" varchar(10) NOT NULL,
     "short_name" varchar(40) NOT NULL,
+    "link_planilha_300" TEXT,
     "created_at" TIMESTAMPTZ DEFAULT now() NOT NULL,
     "updated_at" TIMESTAMPTZ DEFAULT now() NOT NULL,
     CONSTRAINT "courses_name_unique" UNIQUE("name"),

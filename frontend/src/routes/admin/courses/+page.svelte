@@ -15,6 +15,7 @@
         name: string;
         sigla: string;
         shortName: string;
+        linkPlanilha300?: string | null;
         updatedAt: string;
         teachers?: Teacher[];
     }
@@ -28,7 +29,7 @@
     // Modal
     let showModal = $state(false);
     let editingCourse = $state<Course | null>(null);
-    let form = $state({ name: '', sigla: '', shortName: '', teacherIds: [] as string[] });
+    let form = $state({ name: '', sigla: '', shortName: '', linkPlanilha300: '' as string | null, teacherIds: [] as string[] });
 
     onMount(loadData);
 
@@ -60,11 +61,12 @@
                 name: course.name,
                 sigla: course.sigla,
                 shortName: course.shortName,
+                linkPlanilha300: course.linkPlanilha300 ?? '',
                 teacherIds: course.teachers ? course.teachers.map(t => t.id) : [] 
             };
         } else {
             editingCourse = null;
-            form = { name: '', sigla: '', shortName: '', teacherIds: [] };
+            form = { name: '', sigla: '', shortName: '', linkPlanilha300: '', teacherIds: [] };
         }
         showModal = true;
     }
@@ -228,6 +230,18 @@
                         required
                         placeholder="Ex: Técnico em Informática"
                     >
+                </div>
+
+                <div>
+                    <label for="courseLinkPlanilha300" class="block text-sm font-medium text-gray-700 mb-1">Link da Planilha 300h</label>
+                    <input 
+                        id="courseLinkPlanilha300"
+                        type="url" 
+                        bind:value={form.linkPlanilha300} 
+                        class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" 
+                        placeholder="https://docs.google.com/spreadsheets/..."
+                    >
+                    <p class="text-xs text-gray-500 mt-1">URL da planilha de controle de 300 horas (opcional).</p>
                 </div>
 
                 <div>

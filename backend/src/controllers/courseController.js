@@ -84,7 +84,7 @@ exports.getCourseById = async (req, res, next) => {
 // Criar novo curso
 exports.createCourse = async (req, res, next) => {
     try {
-        const { name, sigla, shortName, teacherIds } = req.body;
+        const { name, sigla, shortName, linkPlanilha300, teacherIds } = req.body;
         if (!name) return res.status(400).json({ error: 'Nome do curso é obrigatório' });
         if (!sigla) return res.status(400).json({ error: 'Sigla do curso é obrigatória' });
         if (!shortName) return res.status(400).json({ error: 'Nome curto do curso é obrigatório' });
@@ -94,7 +94,8 @@ exports.createCourse = async (req, res, next) => {
             const [course] = await tx.insert(courses).values({
                 name: formatarNome(name),
                 sigla: sigla.toUpperCase(),
-                shortName: formatarNome(shortName)
+                shortName: formatarNome(shortName),
+                linkPlanilha300: linkPlanilha300 ?? null
             }).returning();
 
             // 2. Vincular professores (se houver)
@@ -121,7 +122,7 @@ exports.createCourse = async (req, res, next) => {
 exports.updateCourse = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const { name, sigla, shortName, teacherIds } = req.body;
+        const { name, sigla, shortName, linkPlanilha300, teacherIds } = req.body;
 
         if (!name) return res.status(400).json({ error: 'Nome do curso é obrigatório' });
         if (!sigla) return res.status(400).json({ error: 'Sigla do curso é obrigatória' });
@@ -134,6 +135,7 @@ exports.updateCourse = async (req, res, next) => {
                     name: formatarNome(name),
                     sigla: sigla.toUpperCase(),
                     shortName: formatarNome(shortName),
+                    linkPlanilha300: linkPlanilha300 ?? null,
                     updatedAt: new Date()
                 })
                 .where(eq(courses.id, id))
