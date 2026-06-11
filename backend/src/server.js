@@ -33,6 +33,7 @@ const configRoutes = require('./routes/configRoutes');
 const webhookRoutes = require('./routes/webhookRoutes');
 const emailRoutes = require('./routes/emailRoutes');
 const alunoRoutes = require('./routes/alunoRoutes');
+const planilha300Routes = require('./routes/planilha300Routes');
 // Rotas
 app.use('/api/auth', authRoutes);
 app.use('/api/webhooks', webhookRoutes);
@@ -47,6 +48,7 @@ app.use('/api/usuarios', userRoutes);
 app.use('/api/forms', formRoutes);
 app.use('/api/internships', internshipRoutes);
 app.use('/api/alunos', alunoRoutes);
+app.use('/api/planilhas300', planilha300Routes);
 app.use('/api/system', keepAliveRoutes);
 
 // Rota de Teste

@@ -16,6 +16,28 @@
 	let errorMessage = $state('');
 	let successMessage = $state('');
 
+	// Sync Planilhas 300h
+	let syncing = $state(false);
+	let syncResult = $state<{ message: string; resultados: Array<{ sigla: string; status: string; mensagem: string; current?: string; previous?: string | null }> } | null>(null);
+
+	async function syncPlanilhas() {
+		syncing = true;
+		syncResult = null;
+		try {
+			const res = await apiFetch('/planilhas300/sync', { method: 'POST' });
+			const data = await res.json();
+			if (res.ok) {
+				syncResult = data;
+			} else {
+				syncResult = { message: data.error || 'Erro ao sincronizar.', resultados: [] };
+			}
+		} catch (e) {
+			syncResult = { message: 'Erro de conexão ao sincronizar.', resultados: [] };
+		} finally {
+			syncing = false;
+		}
+	}
+
 	// Modal
 	let showModal = $state(false);
 	let editingTeacher = $state<Teacher | null>(null);
@@ -110,24 +132,37 @@
 			<h1 class="text-2xl font-bold text-gray-900">Gerenciamento de Professores</h1>
 			<p class="text-sm text-gray-500">Adicione, edite ou remova professores da instituição.</p>
 		</div>
-		<button
-			onclick={() => openModal()}
-			class="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 font-medium text-white shadow-sm transition-colors hover:bg-blue-700"
-		>
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				class="h-5 w-5"
-				viewBox="0 0 20 20"
-				fill="currentColor"
+		<div class="flex items-center gap-2">
+			<button
+				onclick={syncPlanilhas}
+				disabled={syncing}
+				class="flex items-center gap-2 rounded-lg border border-emerald-600 px-4 py-2 font-medium text-emerald-700 shadow-sm transition-colors hover:bg-emerald-50 disabled:opacity-50"
+				title="Baixar/atualizar os CSVs das planilhas 300h de todos os cursos"
 			>
-				<path
-					fill-rule="evenodd"
-					d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
-					clip-rule="evenodd"
-				/>
-			</svg>
-			Novo Professor
-		</button>
+				{#if syncing}
+					<svg class="h-5 w-5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+						<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+						<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+					</svg>
+					Sincronizando…
+				{:else}
+					<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+					</svg>
+					Sincronizar Planilhas 300h
+				{/if}
+			</button>
+
+			<button
+				onclick={() => openModal()}
+				class="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 font-medium text-white shadow-sm transition-colors hover:bg-blue-700"
+			>
+				<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+					<path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+				</svg>
+				Novo Professor
+			</button>
+		</div>
 	</div>
 
 	<!-- Messages -->
@@ -137,9 +172,41 @@
 			class="mb-6 flex items-center justify-between rounded border-l-4 border-green-500 bg-green-50 p-4 text-green-700 shadow-sm"
 		>
 			<span class="font-medium">{successMessage}</span>
-			<button onclick={() => (successMessage = '')} class="text-green-600 hover:text-green-800"
-				>&times;</button
-			>
+			<button onclick={() => (successMessage = '')} class="text-green-600 hover:text-green-800">&times;</button>
+		</div>
+	{/if}
+
+	<!-- Resultado do Sync de Planilhas -->
+	{#if syncResult}
+		<div transition:slide class="mb-6 rounded-xl border border-gray-200 bg-white shadow-sm">
+			<div class="flex items-center justify-between border-b border-gray-200 px-4 py-3">
+				<span class="font-semibold text-gray-800">{syncResult.message}</span>
+				<button onclick={() => (syncResult = null)} class="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
+			</div>
+			{#if syncResult.resultados.length > 0}
+				<ul class="divide-y divide-gray-100">
+					{#each syncResult.resultados as r}
+						<li class="flex items-start gap-3 px-4 py-3">
+							{#if r.status === 'ok'}
+								<svg class="mt-0.5 h-5 w-5 shrink-0 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+								</svg>
+							{:else}
+								<svg class="mt-0.5 h-5 w-5 shrink-0 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+								</svg>
+							{/if}
+							<div>
+								<span class="font-medium text-gray-800">{r.sigla}</span>
+								<span class="ml-2 text-sm text-gray-500">{r.mensagem}</span>
+								{#if r.status === 'ok' && r.previous}
+									<p class="mt-0.5 text-xs text-gray-400">Anterior salvo em: {r.previous}</p>
+								{/if}
+							</div>
+						</li>
+					{/each}
+				</ul>
+			{/if}
 		</div>
 	{/if}
 
