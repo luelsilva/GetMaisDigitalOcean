@@ -7,3 +7,9 @@ instance-20260403-1835
 IP: 137.131.158.89
 
 ponto de restauração
+
+memoria da sessao
+
+C:\Users\Luiz\.gemini\antigravity-ide\brain\5d6ebca1-e00d-41d2-bfa1-2dfc89d395bb\memoria_sessao.md
+
+

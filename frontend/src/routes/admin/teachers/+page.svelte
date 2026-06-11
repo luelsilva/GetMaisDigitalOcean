@@ -18,21 +18,39 @@
 
 	// Sync Planilhas 300h
 	let syncing = $state(false);
-	let syncResult = $state<{ message: string; resultados: Array<{ sigla: string; status: string; mensagem: string; current?: string; previous?: string | null }> } | null>(null);
+	let syncResult = $state<{
+		message: string;
+		etapas: { nome: string; message: string; resultados: Array<{ sigla: string; status: string; mensagem: string }> }[];
+	} | null>(null);
 
 	async function syncPlanilhas() {
 		syncing = true;
 		syncResult = null;
+		const etapas = [];
+
 		try {
-			const res = await apiFetch('/planilhas300/sync', { method: 'POST' });
-			const data = await res.json();
-			if (res.ok) {
-				syncResult = data;
-			} else {
-				syncResult = { message: data.error || 'Erro ao sincronizar.', resultados: [] };
+			// Etapa 1: Download
+			const resSync = await apiFetch('/planilhas300/sync', { method: 'POST' });
+			const dataSync = await resSync.json();
+			etapas.push({ nome: '1. Download', message: dataSync.message, resultados: dataSync.resultados ?? [] });
+
+			// Se retornou 409 (pendentes), para aqui
+			if (!resSync.ok) {
+				syncResult = { message: dataSync.message, etapas };
+				return;
 			}
+
+			// Etapa 2: Comparação
+			const resComparar = await apiFetch('/planilhas300/comparar', { method: 'POST' });
+			const dataComparar = await resComparar.json();
+			etapas.push({ nome: '2. Comparação', message: dataComparar.message, resultados: dataComparar.resultados ?? [] });
+
+			syncResult = {
+				message: resComparar.ok ? dataComparar.message : (dataComparar.error || 'Erro na comparação.'),
+				etapas
+			};
 		} catch (e) {
-			syncResult = { message: 'Erro de conexão ao sincronizar.', resultados: [] };
+			syncResult = { message: 'Erro de conexão.', etapas };
 		} finally {
 			syncing = false;
 		}
@@ -181,34 +199,44 @@
 		<div transition:slide class="mb-6 rounded-xl border border-gray-200 bg-white shadow-sm">
 			<div class="flex items-center justify-between border-b border-gray-200 px-4 py-3">
 				<span class="font-semibold text-gray-800">{syncResult.message}</span>
-				<button onclick={() => (syncResult = null)} class="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
+				<button onclick={() => (syncResult = null)} class="text-lg leading-none text-gray-400 hover:text-gray-600">&times;</button>
 			</div>
-			{#if syncResult.resultados.length > 0}
-				<ul class="divide-y divide-gray-100">
-					{#each syncResult.resultados as r}
-						<li class="flex items-start gap-3 px-4 py-3">
-							{#if r.status === 'ok'}
-								<svg class="mt-0.5 h-5 w-5 shrink-0 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-								</svg>
-							{:else}
-								<svg class="mt-0.5 h-5 w-5 shrink-0 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-								</svg>
-							{/if}
-							<div>
-								<span class="font-medium text-gray-800">{r.sigla}</span>
-								<span class="ml-2 text-sm text-gray-500">{r.mensagem}</span>
-								{#if r.status === 'ok' && r.previous}
-									<p class="mt-0.5 text-xs text-gray-400">Anterior salvo em: {r.previous}</p>
+			{#each syncResult.etapas as etapa}
+				{#if etapa.resultados.length > 0}
+					<div class="border-b border-gray-100 px-4 py-2 bg-gray-50">
+						<span class="text-xs font-semibold uppercase tracking-wider text-gray-500">{etapa.nome}</span>
+						<span class="ml-2 text-xs text-gray-400">{etapa.message}</span>
+					</div>
+					<ul class="divide-y divide-gray-100">
+						{#each etapa.resultados as r}
+							<li class="flex items-center gap-3 px-4 py-2">
+								{#if r.status === 'ok' || r.status === 'alterado'}
+									<svg class="h-4 w-4 shrink-0 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+									</svg>
+								{:else if r.status === 'sem_alteracao' || r.status === 'sem_novidade'}
+									<svg class="h-4 w-4 shrink-0 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14" />
+									</svg>
+								{:else if r.status === 'erro'}
+									<svg class="h-4 w-4 shrink-0 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+									</svg>
+								{:else}
+									<svg class="h-4 w-4 shrink-0 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 110 20A10 10 0 0112 2z" />
+									</svg>
 								{/if}
-							</div>
-						</li>
-					{/each}
-				</ul>
-			{/if}
+								<span class="w-12 font-medium text-gray-800">{r.sigla}</span>
+								<span class="text-sm text-gray-500">{r.mensagem}</span>
+							</li>
+						{/each}
+					</ul>
+				{/if}
+			{/each}
 		</div>
 	{/if}
+
 
 	{#if loading}
 		<div class="space-y-4">

@@ -13,3 +13,6 @@ yarn-error.log*
 # Drizzle
 drizzle/
 
+# Dados gerados em runtime (CSVs das planilhas 300h)
+src/data/
+
