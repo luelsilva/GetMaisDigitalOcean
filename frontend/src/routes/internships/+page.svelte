@@ -222,7 +222,10 @@
 
 	function formatDate(dateStr: string) {
 		if (!dateStr) return '-';
-		return new Date(dateStr).toLocaleDateString('pt-BR');
+		// Evita interpretação como UTC midnight (que causaria -1 dia no fuso UTC-3).
+		// "2025-06-15" → ["2025","06","15"] → "15/06/2025"
+		const [year, month, day] = dateStr.split('T')[0].split('-');
+		return `${day}/${month}/${year}`;
 	}
 
 	let totalPages = $derived(Math.ceil(totalRecords / pageSize));

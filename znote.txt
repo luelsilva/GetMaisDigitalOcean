@@ -12,4 +12,15 @@ memoria da sessao
 
 C:\Users\Luiz\.gemini\antigravity-ide\brain\5d6ebca1-e00d-41d2-bfa1-2dfc89d395bb\memoria_sessao.md
 
+# Ver se tem container rodando
+docker ps
 
+# Se tiver, entrar no container e verificar
+docker exec -it <nome_do_container> ls /app/src/data
+
+
+# Apaga todos os arquivos .csv dentro da pasta
+docker exec 97d237b877db sh -c "rm -f /app/src/data/planilhas_300/*.csv"
+
+# Confirmar que ficou vazia
+docker exec 97d237b877db ls /app/src/data/planilhas_300
