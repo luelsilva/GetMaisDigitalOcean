@@ -1,8 +1,10 @@
 FROM node:20-slim
 
-# Instala o LibreOffice necessário para a conversão de DOCX para PDF
+# Instala o LibreOffice e dependências (Java e Fontes) necessários para a conversão de DOCX para PDF
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libreoffice \
+    default-jre \
+    fonts-liberation \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

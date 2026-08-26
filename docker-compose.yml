@@ -13,6 +13,7 @@ services:
     # Sem portas expostas externamente (comunica via rede interna do docker)
     expose:
       - "3000"
+    shm_size: '512m'
 
   frontend:
     build:
